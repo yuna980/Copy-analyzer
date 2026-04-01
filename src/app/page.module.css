@@ -186,6 +186,10 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.dataTable th.centerAlign, .dataTable td.centerAlign {
+  text-align: center;
+}
+
 .dataTable th {
   background: rgba(255, 255, 255, 0.03);
   font-weight: 700;

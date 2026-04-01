@@ -122,9 +122,9 @@ export default function Home() {
               <table className={styles.dataTable}>
                 <thead>
                   <tr>
-                    <th style={{ width: '10%' }}>number</th>
+                    <th className={styles.centerAlign} style={{ width: '10%' }}>number</th>
                     <th style={{ width: '30%' }}>Text</th>
-                    <th style={{ width: '15%' }}>MAX CHAR</th>
+                    <th className={styles.centerAlign} style={{ width: '15%' }}>MAX CHAR</th>
                     <th style={{ width: '15%' }}>note</th>
                     <th style={{ width: '30%' }}>Translate Text</th>
                   </tr>
@@ -133,9 +133,9 @@ export default function Home() {
                   {results.length > 0 ? (
                     results.map((row, idx) => (
                       <tr key={idx}>
-                        <td><span className={styles.cellNumber}>{row.number}</span></td>
+                        <td className={styles.centerAlign}><span className={styles.cellNumber}>{row.number}</span></td>
                         <td><div className={styles.cellExample}>{row.text}</div></td>
-                        <td><span className={styles.cellGuide}>{row.guide}</span></td>
+                        <td className={styles.centerAlign}><span className={styles.cellGuide}>{row.guide}</span></td>
                         <td><span className={styles.cellNote}>{row.note}</span></td>
                         <td><div className={styles.cellExample}>{row.translateText}</div></td>
                       </tr>

@@ -24,11 +24,27 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
             properties: {
               number: { type: SchemaType.STRING },
               text: { type: SchemaType.STRING },
-              guide: { type: SchemaType.INTEGER },
-              note: { type: SchemaType.STRING },
-              translateText: { type: SchemaType.STRING }
+              translations: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  스페인어: { type: SchemaType.STRING },
+                  프랑스어: { type: SchemaType.STRING },
+                  독일어: { type: SchemaType.STRING },
+                  러시아어: { type: SchemaType.STRING },
+                  아랍어: { type: SchemaType.STRING },
+                  포르투갈어: { type: SchemaType.STRING },
+                  이탈리아어: { type: SchemaType.STRING },
+                  네덜란드어: { type: SchemaType.STRING },
+                  폴란드어: { type: SchemaType.STRING },
+                  그리스어: { type: SchemaType.STRING },
+                  튀르키예어: { type: SchemaType.STRING },
+                  힌디어: { type: SchemaType.STRING },
+                  베트남어: { type: SchemaType.STRING },
+                  태국어: { type: SchemaType.STRING }
+                }
+              }
             },
-            required: ["number", "text", "guide", "note", "translateText"]
+            required: ["number", "text", "translations"]
           }
         }
       }
@@ -39,17 +55,13 @@ You are an expert copywriter and translator. An image containing text is provide
 Your task is:
 1. Extract the text for each numbered item in the image. 
    CRITICAL RULE: If a numbered label (like a box with "2" on it) contains multiple text icons or phrases inside it (for example, "Mobile", "Tablet", "Watch", etc.), you MUST assign the SAME number to all those text elements. For example: "2" for Mobile, "2" for Tablet.
-2. For each extracted text, act as a professional copywriter to translate it into standard major broad languages worldwide (e.g., English, Spanish, French, German, Russian, Chinese, Japanese, Korean, Arabic, Portuguese, Hindi, etc.). Make sure the translations are highly intuitive, simple, highly readable, and natural in that language.
-3. For each extracted text item, figure out which language yields the LONGEST translated string in terms of character count.
-4. Count the number of characters of that longest translation.
+2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch, Polish, Greek, Turkish, Hindi, Vietnamese, Thai. Make sure the translations are highly intuitive, simple, highly readable, and natural per language.
 
 Return the result STRICTLY as a JSON array of objects.
-Each object must exactly have these 5 keys:
+Each object must exactly have these 3 keys:
 - "number": The item number found or assigned (e.g., "1", "2"). Group texts pointing to the same label under the same number.
 - "text": The exact original text extracted from the image.
-- "guide": The character count of the longest translation (an integer).
-- "note": The name of the language that yielded the longest translation, WRITTEN IN KOREAN ONLY (e.g., "스페인어", "러시아어", "프랑스어", "독일어").
-- "translateText": The actual translated string in that longest language.
+- "translations": An object storing the translated string mapped to its respective language name IN KOREAN as the key (e.g., "스페인어", "프랑스어", "이탈리아어", "독일어", etc.). Provide the translated string for ALL requested languages.
 `;
 
     // 503 서비스 지연(High demand) 발생 시 최대 3번까지 자동 재시도하는 로직 적용
@@ -85,13 +97,29 @@ Each object must exactly have these 5 keys:
     const text = result.response.text();
     let data = JSON.parse(text);
     
-    // AI의 고질적인 글자수 카운팅 오류 방지를 위해, 서버에서 실제 완성된 번역문의 길이를 정확히 재계산하여 덮어씌웁니다.
+    // AI의 고질적인 예측 한계를 극복하기 위해, 번역된 14개국 언어 문자열을 서버에서 직접 순회하여 가장 긴 텍스트를 수학적으로 찾아냅니다.
     if (Array.isArray(data)) {
       data = data.map((item: any) => {
-        if (item.translateText) {
-          item.guide = item.translateText.length;
+        let longestLang = "";
+        let longestText = "";
+        
+        if (item.translations && typeof item.translations === "object") {
+           for (const [lang, trans] of Object.entries(item.translations)) {
+             const str = String(trans);
+             if (str.length > longestText.length) {
+               longestText = str;
+               longestLang = lang;
+             }
+           }
         }
-        return item;
+        
+        return {
+          number: item.number || "",
+          text: item.text || "",
+          guide: longestText.length,
+          note: longestLang || "알 수 없음",
+          translateText: longestText
+        };
       });
     }
     

@@ -83,7 +83,17 @@ Each object must exactly have these 5 keys:
     }
 
     const text = result.response.text();
-    const data = JSON.parse(text);
+    let data = JSON.parse(text);
+    
+    // AI의 고질적인 글자수 카운팅 오류 방지를 위해, 서버에서 실제 완성된 번역문의 길이를 정확히 재계산하여 덮어씌웁니다.
+    if (Array.isArray(data)) {
+      data = data.map((item: any) => {
+        if (item.translateText) {
+          item.guide = item.translateText.length;
+        }
+        return item;
+      });
+    }
     
     return { success: true, data };
   } catch (error: any) {

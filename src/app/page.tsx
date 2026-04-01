@@ -124,7 +124,7 @@ export default function Home() {
                   <tr>
                     <th style={{ width: '10%' }}>number</th>
                     <th style={{ width: '30%' }}>Text</th>
-                    <th style={{ width: '15%' }}>guide</th>
+                    <th style={{ width: '15%' }}>MAX CHAR</th>
                     <th style={{ width: '15%' }}>note</th>
                     <th style={{ width: '30%' }}>Translate Text</th>
                   </tr>

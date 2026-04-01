@@ -49,15 +49,35 @@ Each object must exactly have these 4 keys:
 - "note": The name of the language that yielded the longest translation (e.g., "Russian", "Spanish").
 `;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Image,
-          mimeType,
-        },
-      },
-    ]);
+    // 503 서비스 지연(High demand) 발생 시 최대 3번까지 자동 재시도하는 로직 적용
+    const MAX_RETRIES = 3;
+    let result;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: base64Image,
+              mimeType,
+            },
+          },
+        ]);
+        break; // 성공하면 루프 탈출
+      } catch (err: any) {
+        if (err.status === 503 || err.message?.includes("503") || err.message?.includes("High demand") || err.message?.includes("high demand")) {
+          if (attempt === MAX_RETRIES) throw err;
+          console.log(`[Google API 503 에러] 서버 지연으로 인해 재시도합니다... (${attempt}/${MAX_RETRIES})`);
+          await new Promise((resolve) => setTimeout(resolve, 2000)); // 2초 대기 후 재시도
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    if (!result || !result.response) {
+       throw new Error("결과를 성공적으로 가져오지 못했습니다.");
+    }
 
     const text = result.response.text();
     const data = JSON.parse(text);

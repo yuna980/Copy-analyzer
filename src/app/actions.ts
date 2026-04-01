@@ -2,13 +2,19 @@
 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
-const apiKey = process.env.NEXT_PRIVATE_GEMINI_API_KEY!;
-const genAI = new GoogleGenerativeAI(apiKey);
-
 export async function processImageAndTranslate(base64Image: string, mimeType: string) {
   try {
+    // 런타임 호출 시점에 API 키를 로드하여 캐싱/undefined 문제를 방지합니다.
+    const apiKey = process.env.NEXT_PRIVATE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("API 키가 환경 변수에 설정되지 않았습니다.");
+    }
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
+    // 현재 입력하신 API 키는 권한상 1.5-pro 호출이 막혀 있어 404 반환됨. 
+    // 제공된 키에서 확실하게 지원되는 gemini-1.5-flash 혹은 2.5-flash를 사용합니다.
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-pro",
+      model: "gemini-1.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {

@@ -23,11 +23,12 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
             type: SchemaType.OBJECT,
             properties: {
               number: { type: SchemaType.STRING },
-              example: { type: SchemaType.STRING },
+              text: { type: SchemaType.STRING },
               guide: { type: SchemaType.INTEGER },
-              note: { type: SchemaType.STRING }
+              note: { type: SchemaType.STRING },
+              translateText: { type: SchemaType.STRING }
             },
-            required: ["number", "example", "guide", "note"]
+            required: ["number", "text", "guide", "note", "translateText"]
           }
         }
       }
@@ -36,17 +37,19 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
     const prompt = `
 You are an expert copywriter and translator. An image containing text is provided.
 Your task is:
-1. Extract the text for each numbered item in the image. If there are no explicit numbers but distinct text elements, group they and number them yourself starting from 1.
+1. Extract the text for each numbered item in the image. 
+   CRITICAL RULE: If a numbered label (like a box with "2" on it) contains multiple text icons or phrases inside it (for example, "Mobile", "Tablet", "Watch", etc.), you MUST assign the SAME number to all those text elements. For example: "2" for Mobile, "2" for Tablet.
 2. For each extracted text, act as a professional copywriter to translate it into standard major broad languages worldwide (e.g., English, Spanish, French, German, Russian, Chinese, Japanese, Korean, Arabic, Portuguese, Hindi, etc.). Make sure the translations are highly intuitive, simple, highly readable, and natural in that language.
 3. For each extracted text item, figure out which language yields the LONGEST translated string in terms of character count.
 4. Count the number of characters of that longest translation.
 
 Return the result STRICTLY as a JSON array of objects.
-Each object must exactly have these 4 keys:
-- "number": The item number found or assigned (e.g., "1", "2").
-- "example": The exact original text extracted from the image.
-- "guide": The character count of the longest translation (a number).
-- "note": The name of the language that yielded the longest translation (e.g., "Russian", "Spanish").
+Each object must exactly have these 5 keys:
+- "number": The item number found or assigned (e.g., "1", "2"). Group texts pointing to the same label under the same number.
+- "text": The exact original text extracted from the image.
+- "guide": The character count of the longest translation (an integer).
+- "note": The name of the language that yielded the longest translation, WRITTEN IN KOREAN ONLY (e.g., "스페인어", "러시아어", "프랑스어", "독일어").
+- "translateText": The actual translated string in that longest language.
 `;
 
     // 503 서비스 지연(High demand) 발생 시 최대 3번까지 자동 재시도하는 로직 적용

@@ -6,9 +6,10 @@ import styles from "./page.module.css";
 
 interface TranslationResult {
   number: string | number;
-  example: string;
+  text: string;
   guide: number;
   note: string;
+  translateText: string;
 }
 
 export default function Home() {
@@ -120,9 +121,10 @@ export default function Home() {
                 <thead>
                   <tr>
                     <th style={{ width: '10%' }}>number</th>
-                    <th style={{ width: '40%' }}>example</th>
-                    <th style={{ width: '20%' }}>guide</th>
-                    <th style={{ width: '30%' }}>note</th>
+                    <th style={{ width: '30%' }}>Text</th>
+                    <th style={{ width: '15%' }}>guide</th>
+                    <th style={{ width: '15%' }}>note</th>
+                    <th style={{ width: '30%' }}>Translate Text</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -130,14 +132,15 @@ export default function Home() {
                     results.map((row, idx) => (
                       <tr key={idx}>
                         <td><span className={styles.cellNumber}>{row.number}</span></td>
-                        <td><div className={styles.cellExample}>{row.example}</div></td>
-                        <td><span className={styles.cellGuide}>{row.guide} 자</span></td>
+                        <td><div className={styles.cellExample}>{row.text}</div></td>
+                        <td><span className={styles.cellGuide}>{row.guide}</span></td>
                         <td><span className={styles.cellNote}>{row.note}</span></td>
+                        <td><div className={styles.cellExample}>{row.translateText}</div></td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                      <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
                         추출된 텍스트가 없습니다.
                       </td>
                     </tr>

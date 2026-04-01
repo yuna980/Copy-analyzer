@@ -12,9 +12,9 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
     const genAI = new GoogleGenerativeAI(apiKey);
     
     // 현재 입력하신 API 키는 권한상 1.5-pro 호출이 막혀 있어 404 반환됨. 
-    // 제공된 키에서 확실하게 지원되는 gemini-1.5-flash 혹은 2.5-flash를 사용합니다.
+    // 제공된 키에서 확실하게 지원되는 gemini-2.5-flash를 사용합니다.
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash",
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {

@@ -66,27 +66,29 @@ export default function Home() {
         
         <div className={styles.glassCard}>
           {/* 이미지 업로드 영역 */}
-          <div className={styles.uploadArea}>
-            <input 
-              type="file" 
-              accept="image/*" 
-              onChange={handleImageChange} 
-              className={styles.uploadInput}
-              title="Click or drag an image here"
-            />
-            {imagePreview ? (
-              <div>
+          <div className={styles.uploadWrapper}>
+            <div className={styles.uploadArea}>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageChange} 
+                className={styles.uploadInput}
+                title="Click or drag an image here"
+              />
+              {imagePreview ? (
                 <img src={imagePreview} alt="Preview" className={styles.previewImage} />
-                <p style={{ marginTop: '1rem', color: '#94a3b8', fontSize: '0.85rem' }}>
-                  클릭하거나 드래그하여 이미지를 교체할 수 있습니다.
-                </p>
-              </div>
-            ) : (
-              <div>
-                <div className={styles.icon}>📷</div>
-                <div className={styles.uploadText}>이미지 분석 시작하기</div>
-                <div className={styles.uploadSubtext}>클릭하거나 이미지를 드래그 앤 드롭 하세요</div>
-              </div>
+              ) : (
+                <div className={styles.uploadPlaceholder}>
+                  <div className={styles.icon}>📷</div>
+                  <div className={styles.uploadText}>이미지 분석 시작하기</div>
+                  <div className={styles.uploadSubtext}>클릭하거나 이미지를 드래그 앤 드롭 하세요</div>
+                </div>
+              )}
+            </div>
+            {imagePreview && (
+              <p className={styles.outsideDescription}>
+                * 영역을 클릭하거나 이미지를 드래그하여 교체할 수 있습니다.
+              </p>
             )}
           </div>
 

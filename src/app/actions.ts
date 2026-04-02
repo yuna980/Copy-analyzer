@@ -118,7 +118,7 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
 You are an expert copywriter and translator. An image containing text is provided.
 Your task is:
 1. Extract the text for each numbered item in the image. 
-   CRITICAL RULE: If a numbered label (like a box with "2" on it) contains multiple text icons or phrases inside it (for example, "Mobile", "Tablet", "Watch", etc.), you MUST assign the SAME number to all those text elements. For example: "2" for Mobile, "2" for Tablet.
+   CRITICAL RULE: If the image contains detailed sub-numbers (like "2-1", "2-2", "2.1", "3A"), you MUST extract and assign EXACTLY that detailed number. DO NOT group them broadly under a single root number like "2" if they have specific sub-numbers. preserving exact hierarchical numbering is critical.
 2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch, Polish, Greek, Turkish, Hindi, Vietnamese, Thai. 
    CRITICAL REQUIREMENT: For EVERY single language, you MUST provide an array of exactly 2 different NATURAL UI variations. 
      - Variation 1: Direct & Concise (e.g., extremely short literal translation commonly used in small UI buttons).

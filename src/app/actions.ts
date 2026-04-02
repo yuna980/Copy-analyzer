@@ -118,11 +118,12 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
 You are an expert copywriter and translator. An image containing text is provided.
 Your task is:
 1. Extract the text for each numbered item in the image. 
-   CRITICAL RULE ON NUMBERING: The image contains explicit design annotation labels (usually explicitly drawn boxes or badges with numbers like "1", "2", "2-1", "2-2", "3-1a").
-   You MUST map each extracted text to its MOST SPECIFIC annotation number:
-   - If a text has a specific sub-number label pointing directly to it or next to it (e.g., "Device details" next to "2-2"), assign it that exact specific sub-number ("2-2").
-   - If a text is instead located inside a larger encompassing boundary box (e.g., a "2" box) BUT lacks its own specific sub-number label (e.g., "Device conditions" has no specific label of its own), assign it the parent boundary box's number ("2").
-   - DO NOT discard sub-numbers. Preserve exact strings like "2-1", "3-1a" strictly.
+   CRITICAL RULE ON NUMBERING AND MAPPING: The image contains explicitly drawn annotation boxes/labels (e.g., bright blue boundary boxes or tags containing identifiers like "1", "2", "2-1", "3-1a").
+   You MUST map each extracted text ONLY to its corresponding annotation box identifier:
+   - If a text has a specific sub-number annotation label pointing directly to it (e.g., "Device details" pointed by a label "2-2"), assign it that exact specific sub-number ("2-2").
+   - If a text is inside a larger encompassing annotation boundary box (e.g., a huge box labeled "2") BUT lacks its own specific sub-number label, assign it the parent boundary box's numerical identifier ("2").
+   - DO NOT confuse UI design elements (like black/gray circles representing steps "1", "2", "3", "4" in a UI progress bar) with our external annotation labels. The annotation labels are explicitly drawn on top of the design.
+   - STRICT FILTER: DO NOT extract or translate standalone numerals that act as graphic icons or progress steps (e.g., a circle with just the number "1" inside). Only extract actual translatable words/phrases.
 2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch, Polish, Greek, Turkish, Hindi, Vietnamese, Thai. 
    CRITICAL REQUIREMENT: For EVERY single language, you MUST provide an array of exactly 2 different NATURAL UI variations. 
      - Variation 1: Direct & Concise (e.g., extremely short literal translation commonly used in small UI buttons).

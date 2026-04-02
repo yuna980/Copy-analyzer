@@ -20,12 +20,16 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
       if (!data.success) throw new Error("자동화 봇으로 의심되어 차단되었습니다.");
     }
 
-    // 2단계: Upstash Redis를 이용한 IP 기반 API 무한 호출 방지 (Rate Limiting)
+    // ===== Upstash Redis 연동 구역 (Rate Limit & 일일 모델 폴백) =====
     const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
     const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+    
+    let modelName = "gemini-2.5-flash"; // 기본 할당 모델 설정
+    
     if (redisUrl && redisToken) {
       const redis = new Redis({ url: redisUrl, token: redisToken });
-      // 1시간에 20번 요청으로 제한
+      
+      // 1. IP 기반 무한 호출 방어 (Rate Limiting) - 스크립트 테러 방지용
       const ratelimit = new Ratelimit({
         redis: redis,
         limiter: Ratelimit.slidingWindow(20, "1 h"),
@@ -36,7 +40,25 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
       const { success } = await ratelimit.limit(`ratelimit_${ip}`);
       
       if (!success) {
-        throw new Error("API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요 (1시간에 20회 제한).");
+        throw new Error("API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요 (1시간 당 제한).");
+      }
+      
+      // 2. 전체 유저 대상 하루 20회 초과 시 다른 Gemini 모델로 자동 스위칭 (과금/리밋 방어)
+      // 한국 시간 기준으로 날짜 가져오기 (YYYY-MM-DD 형식)
+      const now = new Date();
+      const krTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+      const today = krTime.toISOString().split("T")[0];
+      const dailyKey = `daily_global_clicks_${today}`;
+      
+      const dailyCount = await redis.incr(dailyKey);
+      if (dailyCount === 1) {
+        await redis.expire(dailyKey, 86400 * 2); // 넉넉하게 48시간 후 자동 소멸
+      }
+      
+      // 20회 초과 시 우회 모델로 스위치 (다른 모델명: gemini-2.0-flash 로 변경)
+      if (dailyCount > 20) {
+        modelName = "gemini-2.0-flash";
+        // 1.5-pro는 예전에 막혀있었으므로 2.0-flash나 1.5-flash-8b 등으로 우회하는 것이 안전함.
       }
     }
     // 런타임 호출 시점에 API 키를 로드하여 캐싱/undefined 문제를 방지합니다.
@@ -46,10 +68,9 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
     }
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // 현재 입력하신 API 키는 권한상 1.5-pro 호출이 막혀 있어 404 반환됨. 
-    // 제공된 키에서 확실하게 지원되는 gemini-2.5-flash를 사용합니다.
+    // 할당된 modelName(20회 초과 시 우회 모델)을 주입합니다.
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
+      model: modelName,
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {

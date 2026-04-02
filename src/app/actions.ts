@@ -27,20 +27,20 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
               translations: {
                 type: SchemaType.OBJECT,
                 properties: {
-                  스페인어: { type: SchemaType.STRING },
-                  프랑스어: { type: SchemaType.STRING },
-                  독일어: { type: SchemaType.STRING },
-                  러시아어: { type: SchemaType.STRING },
-                  아랍어: { type: SchemaType.STRING },
-                  포르투갈어: { type: SchemaType.STRING },
-                  이탈리아어: { type: SchemaType.STRING },
-                  네덜란드어: { type: SchemaType.STRING },
-                  폴란드어: { type: SchemaType.STRING },
-                  그리스어: { type: SchemaType.STRING },
-                  튀르키예어: { type: SchemaType.STRING },
-                  힌디어: { type: SchemaType.STRING },
-                  베트남어: { type: SchemaType.STRING },
-                  태국어: { type: SchemaType.STRING }
+                  스페인어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  프랑스어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  독일어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  러시아어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  아랍어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  포르투갈어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  이탈리아어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  네덜란드어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  폴란드어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  그리스어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  튀르키예어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  힌디어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  베트남어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                  태국어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
                 }
               }
             },
@@ -55,7 +55,12 @@ You are an expert copywriter and translator. An image containing text is provide
 Your task is:
 1. Extract the text for each numbered item in the image. 
    CRITICAL RULE: If a numbered label (like a box with "2" on it) contains multiple text icons or phrases inside it (for example, "Mobile", "Tablet", "Watch", etc.), you MUST assign the SAME number to all those text elements. For example: "2" for Mobile, "2" for Tablet.
-2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch, Polish, Greek, Turkish, Hindi, Vietnamese, Thai. Make sure the translations are highly intuitive, simple, highly readable, and natural per language.
+2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch, Polish, Greek, Turkish, Hindi, Vietnamese, Thai. 
+   CRITICAL REQUIREMENT: For EVERY single language, you MUST provide an array of exactly 3 different variations of the translation to account for varying lengths: 
+     - Variation 1: Short & Casual (e.g., literal or informal).
+     - Variation 2: Standard & Natural (e.g., typical usage).
+     - Variation 3: Long & Formal (e.g., highly polite, descriptive, or verbose form).
+   Return these 3 string variations inside the array for every language.
 
 Return the result STRICTLY as a JSON array of objects.
 Each object must exactly have these 3 keys:
@@ -104,11 +109,15 @@ Each object must exactly have these 3 keys:
         let longestText = "";
         
         if (item.translations && typeof item.translations === "object") {
-           for (const [lang, trans] of Object.entries(item.translations)) {
-             const str = String(trans);
-             if (str.length > longestText.length) {
-               longestText = str;
-               longestLang = lang;
+           for (const [lang, transArray] of Object.entries(item.translations)) {
+             if (Array.isArray(transArray)) {
+               for (const trans of transArray) {
+                 const str = String(trans);
+                 if (str.length > longestText.length) {
+                   longestText = str;
+                   longestLang = lang;
+                 }
+               }
              }
            }
         }

@@ -55,10 +55,18 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
         await redis.expire(dailyKey, 86400 * 2); // 넉넉하게 48시간 후 자동 소멸
       }
       
-      // 20회 초과 시 우회 모델로 스위치 (다른 모델명: gemini-2.0-flash 로 변경)
-      if (dailyCount > 20) {
+      // 구간별로 모델을 순차적으로 우회 (모델별 무료 할당량을 영혼까지 끌어쓰기)
+      if (dailyCount <= 20) {
+        modelName = "gemini-2.5-flash";
+      } else if (dailyCount <= 40) {
         modelName = "gemini-2.0-flash";
-        // 1.5-pro는 예전에 막혀있었으므로 2.0-flash나 1.5-flash-8b 등으로 우회하는 것이 안전함.
+      } else if (dailyCount <= 60) {
+        modelName = "gemini-1.5-flash";
+      } else if (dailyCount <= 80) {
+        modelName = "gemini-1.5-flash-8b"; // 가장 가볍고 할당량이 많은 모델을 마지막 방어선으로 배치
+      } else {
+        // 총 80회를 넘기면 깔끔하게 사용자에게 안내하고 서버를 보호합니다.
+        throw new Error("오늘의 AI 무료 분석 한도(총 80회)가 완전히 소진되었습니다. 서버 비용 보호를 위해 내일 다시 이용해주세요.");
       }
     }
     // 런타임 호출 시점에 API 키를 로드하여 캐싱/undefined 문제를 방지합니다.

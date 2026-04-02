@@ -93,10 +93,9 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        <h1 className={styles.title}>번역도우미</h1>
+        <h1 className={styles.title}>번역을 도와드립니다</h1>
         <p className={styles.subtitle}>
-          이미지 안의 텍스트가 번역될 때, 전 세계 어느 언어로 번역해야 가장 길어질지 확인해 보세요.
-          전문 카피라이터처럼 깔끔하고 직관적으로 번역한 결과를 바탕으로 복잡도를 분석합니다.
+          이미지 안의 텍스트가 번역될 때, 전 세계 어느 언어로 번역해야 가장 길어질지 확인해 보세요
         </p>
 
         <div className={styles.glassCard}>

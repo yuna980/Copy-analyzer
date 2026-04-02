@@ -12,7 +12,6 @@ interface TranslationResult {
   translateText: string;
 }
 
-export const maxDuration = 60; // Vercel 서버 시간 60초로 강제 연장
 
 export default function Home() {
   const [imageFile, setImageFile] = useState<File | null>(null);

@@ -123,7 +123,7 @@ Your task is:
    CRITICAL REQUIREMENT: For EVERY single language, you MUST provide an array of exactly 3 different variations of the translation to account for varying lengths: 
      - Variation 1: Short & Casual (e.g., literal or informal).
      - Variation 2: Standard & Natural (e.g., typical usage).
-     - Variation 3: Long & Formal (e.g., highly polite, descriptive, or verbose form).
+     - Variation 3: Respectful & Formal (e.g., formal/polite tone. MUST remain natural and commonly used; DO NOT artificially inflate the length or make it unnaturally verbose).
    Return these 3 string variations inside the array for every language.
 
 Return the result STRICTLY as a JSON array of objects.

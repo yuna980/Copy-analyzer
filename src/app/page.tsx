@@ -144,7 +144,7 @@ export default function Home() {
               className={styles.ctaButton}
               disabled={!imageFile || isProcessing || (turnstileSiteKey && !turnstileToken) ? true : false}
             >
-              {isProcessing ? '가장 긴 텍스트 추출 중... 최대 60초 대기' : '번역 분석 시작하기'}
+              {isProcessing ? '번역 분석 중...' : '번역 분석 시작하기'}
             </button>
             {isProcessing && (
               <div className={styles.processingText}>

@@ -169,13 +169,13 @@ Each object must exactly have these 3 keys:
         break; // 성공하면 즉시 루프 탈출
       } catch (err: any) {
         lastError = err;
-        if (err.status === 503 || err.message?.includes("503") || err.message?.includes("high demand") || err.message?.includes("High demand")) {
-          console.log(`[Google API 503 에러] ${fallbackModels[attempt]} 서버 지연 감지. 즉시 다음 안정화 모델로 우회합니다...`);
+        if (err.status === 503 || err.status === 429 || err.message?.includes("503") || err.message?.includes("429") || err.message?.includes("high demand") || err.message?.includes("High demand") || err.message?.includes("Quota")) {
+          console.log(`[Google API 에러] ${fallbackModels[attempt]} 서버 지연 또는 할당량(Quota/429) 초과 감지. 즉시 다음 모델로 우회합니다... | 에러: ${err.message?.split('\\n')[0]}`);
           // 다음 모델 루프로 넘어가기 전에 약간의 쿨다운 타임
           await new Promise((resolve) => setTimeout(resolve, 500)); 
-          continue; // 실패 시 다음 안정적인 모델로 바로 루프 재배정
+          continue; // 실패 시 다음 모델로 바로 루프 재배정
         } else {
-          // 503이 아닌 치명적 에러(예: API키 오류 등)는 즉시 중단
+          // 503/429가 아닌 치명적 에러(예: API키 오류 등)는 즉시 중단
           throw err;
         }
       }

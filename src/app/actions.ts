@@ -1,5 +1,7 @@
 "use server";
 
+export const maxDuration = 60;
+
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 export async function processImageAndTranslate(base64Image: string, mimeType: string) {
@@ -34,13 +36,7 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
                   아랍어: { type: SchemaType.STRING },
                   포르투갈어: { type: SchemaType.STRING },
                   이탈리아어: { type: SchemaType.STRING },
-                  네덜란드어: { type: SchemaType.STRING },
-                  폴란드어: { type: SchemaType.STRING },
-                  그리스어: { type: SchemaType.STRING },
-                  튀르키예어: { type: SchemaType.STRING },
-                  힌디어: { type: SchemaType.STRING },
-                  베트남어: { type: SchemaType.STRING },
-                  태국어: { type: SchemaType.STRING }
+                  네덜란드어: { type: SchemaType.STRING }
                 }
               }
             },
@@ -55,7 +51,7 @@ You are an expert copywriter and translator. An image containing text is provide
 Your task is:
 1. Extract the text for each numbered item in the image. 
    CRITICAL RULE: If a numbered label (like a box with "2" on it) contains multiple text icons or phrases inside it (for example, "Mobile", "Tablet", "Watch", etc.), you MUST assign the SAME number to all those text elements. For example: "2" for Mobile, "2" for Tablet.
-2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch, Polish, Greek, Turkish, Hindi, Vietnamese, Thai. Make sure the translations are highly intuitive, simple, highly readable, and natural per language.
+2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch. Make sure the translations are highly intuitive, simple, highly readable, and natural per language.
 
 Return the result STRICTLY as a JSON array of objects.
 Each object must exactly have these 3 keys:

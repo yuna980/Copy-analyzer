@@ -118,12 +118,14 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
 You are an expert copywriter and translator. An image containing text is provided.
 Your task is:
 1. Extract the text for each numbered item in the image. 
-   CRITICAL RULE ON NUMBERING AND MAPPING: The image contains explicitly drawn annotation boxes/labels (e.g., bright blue boundary boxes or tags containing identifiers like "1", "2", "2-1", "3-1a").
-   You MUST map each extracted text ONLY to its corresponding annotation box identifier:
-   - If a text has a specific sub-number annotation label pointing directly to it (e.g., "Device details" pointed by a label "2-2"), assign it that exact specific sub-number ("2-2").
-   - If a text is inside a larger encompassing annotation boundary box (e.g., a huge box labeled "2") BUT lacks its own specific sub-number label, assign it the parent boundary box's numerical identifier ("2").
-   - DO NOT confuse UI design elements (like black/gray circles representing steps "1", "2", "3", "4" in a UI progress bar) with our external annotation labels. The annotation labels are explicitly drawn on top of the design.
-   - STRICT FILTER: DO NOT extract or translate standalone numerals that act as graphic icons or progress steps (e.g., a circle with just the number "1" inside). Only extract actual translatable words/phrases.
+   CRITICAL RULE ON EXPLICIT WIREFRAME ANNOTATIONS VS INTERNAL UI ELEMENTS: 
+   The user has manually drawn external wireframe annotation boxes (usually bright colored outlines/badges with hierarchical identifiers like "1", "2", "2-1", "3-1a") ON TOP OF the UI design to explicitly group sections.
+   You MUST map each extracted text ONLY to these external wireframe annotation box identifiers.
+   - Do NOT confuse the UI's internal graphic labels (e.g., black/gray step indicator circles like ❶, ❷, ❸ inside a progress bar) with the user's external annotation identifiers. Internal UI numbers are NOT annotation labels. 
+   - STRICT FILTER: Never extract or translate standalone numerals that represent graphical progress steps (like a solitary "1" or "3" inside a dark circle). Only extract real translatable copy/words.
+   - HIERARCHICAL MATCHING: For any real text (e.g., "Device details" or "Confirm IMEI"):
+     * Check if a specific sub-annotation box (e.g., "2-2") points directly to or surrounds this specific text. If yes, assign it that specific identifier ("2-2").
+     * If the text does NOT have its own specific sub-annotation box, BUT it is encapsulated within a larger parent annotation box (e.g., a massive box labeled "2"), assign it the parent's identifier ("2"). For example, "Confirm IMEI" sits inside the massive "2" box and has no specific sub-box, so it MUST be assigned "2", absolutely ignoring the UI's internal ❸ circle sitting above it.
 2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch, Polish, Greek, Turkish, Hindi, Vietnamese, Thai. 
    CRITICAL REQUIREMENT: For EVERY single language, you MUST provide an array of exactly 2 different NATURAL UI variations. 
      - Variation 1: Direct & Concise (e.g., extremely short literal translation commonly used in small UI buttons).

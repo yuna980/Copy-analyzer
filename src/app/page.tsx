@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Turnstile } from '@marsidev/react-turnstile';
 import { processImageAndTranslate } from "./actions";
 import styles from "./page.module.css";
 
@@ -45,6 +46,9 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<TranslationResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -60,20 +64,20 @@ export default function Home() {
 
   const handleStartProcess = async () => {
     if (!imageFile) return;
-    
+
     setIsProcessing(true);
     setResults(null);
     setError(null);
-    
+
     try {
       if (!imagePreview) throw new Error("이미지를 읽을 수 없습니다.");
-      
+
       // Vercel Serverless Function 페이로드 제한(4.5MB)과 500 에러를 방지하기 위해 클라이언트에서 먼저 압축 진행
       const compressedImageFull = await compressImage(imagePreview);
       const pureBase64Data = compressedImageFull.split(",")[1];
       const mimeType = compressedImageFull.substring(compressedImageFull.indexOf(":") + 1, compressedImageFull.indexOf(";"));
-      
-      const response = await processImageAndTranslate(pureBase64Data, mimeType);
+
+      const response = await processImageAndTranslate(pureBase64Data, mimeType, turnstileToken);
       if (response.success) {
         setResults(response.data);
       } else {
@@ -94,15 +98,15 @@ export default function Home() {
           이미지 안의 텍스트가 번역될 때, 전 세계 어느 언어로 번역해야 가장 길어질지 확인해 보세요.
           전문 카피라이터처럼 깔끔하고 직관적으로 번역한 결과를 바탕으로 복잡도를 분석합니다.
         </p>
-        
+
         <div className={styles.glassCard}>
           {/* 이미지 업로드 영역 */}
           <div className={styles.uploadWrapper}>
             <div className={styles.uploadArea}>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleImageChange} 
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
                 className={styles.uploadInput}
                 title="Click or drag an image here"
               />
@@ -125,12 +129,22 @@ export default function Home() {
 
           {/* CTA 버튼 및 진행 상태 */}
           <div className={styles.actionRow}>
-            <button 
+            {/* 턴스타일 (봇 방어) 영역 */}
+            {turnstileSiteKey && (
+              <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center' }}>
+                <Turnstile 
+                  siteKey={turnstileSiteKey} 
+                  onSuccess={(token) => setTurnstileToken(token)} 
+                />
+              </div>
+            )}
+
+            <button
               onClick={handleStartProcess}
-              disabled={!imageFile || isProcessing}
-              className={styles.ctaButton}
+              className={`${styles.button} ${(!imageFile || isProcessing || (turnstileSiteKey && !turnstileToken)) ? styles.disabled : ''}`}
+              disabled={!imageFile || isProcessing || (turnstileSiteKey && !turnstileToken) ? true : false}
             >
-              번역 분석 시작하기
+              {isProcessing ? '가장 긴 텍스트 추출 중... 최대 60초 대기' : '번역 분석 시작하기'}
             </button>
             {isProcessing && (
               <div className={styles.processingText}>
@@ -192,3 +206,4 @@ export default function Home() {
     </div>
   );
 }
+

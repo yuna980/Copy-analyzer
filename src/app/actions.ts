@@ -1,9 +1,44 @@
 "use server";
 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { headers } from "next/headers";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
-export async function processImageAndTranslate(base64Image: string, mimeType: string) {
+export async function processImageAndTranslate(base64Image: string, mimeType: string, turnstileToken?: string | null) {
   try {
+    // 1단계: Cloudflare Turnstile 봇(스크립트) 접근 검증
+    const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
+    if (turnstileSecret) {
+      if (!turnstileToken) throw new Error("봇 방어 토큰이 없습니다. 버튼을 다시 눌러주세요.");
+      const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `secret=${turnstileSecret}&response=${turnstileToken}`
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error("자동화 봇으로 의심되어 차단되었습니다.");
+    }
+
+    // 2단계: Upstash Redis를 이용한 IP 기반 API 무한 호출 방지 (Rate Limiting)
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (redisUrl && redisToken) {
+      const redis = new Redis({ url: redisUrl, token: redisToken });
+      // 1시간에 20번 요청으로 제한
+      const ratelimit = new Ratelimit({
+        redis: redis,
+        limiter: Ratelimit.slidingWindow(20, "1 h"),
+      });
+      
+      const reqHeaders = await headers();
+      const ip = reqHeaders.get("x-forwarded-for") || "127.0.0.1";
+      const { success } = await ratelimit.limit(`ratelimit_${ip}`);
+      
+      if (!success) {
+        throw new Error("API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요 (1시간에 20회 제한).");
+      }
+    }
     // 런타임 호출 시점에 API 키를 로드하여 캐싱/undefined 문제를 방지합니다.
     const apiKey = process.env.NEXT_PRIVATE_GEMINI_API_KEY;
     if (!apiKey) {

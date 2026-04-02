@@ -120,11 +120,11 @@ Your task is:
 1. Extract the text for each numbered item in the image. 
    CRITICAL RULE: If a numbered label (like a box with "2" on it) contains multiple text icons or phrases inside it (for example, "Mobile", "Tablet", "Watch", etc.), you MUST assign the SAME number to all those text elements. For example: "2" for Mobile, "2" for Tablet.
 2. For each extracted text, act as a professional copywriter to TRANSLATE it into EXACTLY ALL of the following target languages: Spanish, French, German, Russian, Arabic, Portuguese, Italian, Dutch, Polish, Greek, Turkish, Hindi, Vietnamese, Thai. 
-   CRITICAL REQUIREMENT: For EVERY single language, you MUST provide an array of exactly 3 different variations of the translation to account for varying lengths: 
-     - Variation 1: Short & Casual (e.g., literal or informal).
-     - Variation 2: Standard & Natural (e.g., typical usage).
-     - Variation 3: Respectful & Formal (e.g., formal/polite tone. MUST remain natural and commonly used; DO NOT artificially inflate the length or make it unnaturally verbose).
-   Return these 3 string variations inside the array for every language.
+   CRITICAL REQUIREMENT: For EVERY single language, you MUST provide an array of exactly 2 different NATURAL UI variations. 
+     - Variation 1: Direct & Concise (e.g., extremely short literal translation commonly used in small UI buttons).
+     - Variation 2: Standard & Natural (e.g., standard phrasing used in software interfaces).
+     STRICT PROHIBITION: DO NOT add polite filler words. DO NOT add extra semantic meaning. For example, translating "See more" to something like "Click here for more information" is STRICTLY FORBIDDEN. Keep the exact semantic meaning and intent of the original text.
+   Return these 2 string variations inside the array for every language.
 
 Return the result STRICTLY as a JSON array of objects.
 Each object must exactly have these 3 keys:

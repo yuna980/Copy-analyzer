@@ -21,8 +21,8 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
     }
 
     // 2단계: Upstash Redis를 이용한 IP 기반 API 무한 호출 방지 (Rate Limiting)
-    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
     if (redisUrl && redisToken) {
       const redis = new Redis({ url: redisUrl, token: redisToken });
       // 1시간에 20번 요청으로 제한

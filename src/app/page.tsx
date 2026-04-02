@@ -93,7 +93,7 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <div className={styles.content}>
-        <h1 className={styles.title}>Copy Analyzer</h1>
+        <h1 className={styles.title}>번역도우미</h1>
         <p className={styles.subtitle}>
           이미지 안의 텍스트가 번역될 때, 전 세계 어느 언어로 번역해야 가장 길어질지 확인해 보세요.
           전문 카피라이터처럼 깔끔하고 직관적으로 번역한 결과를 바탕으로 복잡도를 분석합니다.
@@ -144,7 +144,7 @@ export default function Home() {
               className={styles.ctaButton}
               disabled={!imageFile || isProcessing || (turnstileSiteKey && !turnstileToken) ? true : false}
             >
-              {isProcessing ? '번역 분석 중...' : '번역 분석 시작하기'}
+              {isProcessing ? '번역 중입니다...' : '번역 시작'}
             </button>
             {isProcessing && (
               <div className={styles.processingText}>
@@ -197,7 +197,7 @@ export default function Home() {
               <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', fontSize: '0.85rem', color: '#94a3b8', lineHeight: '1.5' }}>
                 <strong style={{ color: '#e2e8f0' }}>💡 MAX CHAR 산출 방식 안내</strong><br />
                 동일한 문장도 번역 뉘앙스(직역, 의역, 존댓말 등)에 따라 글자 수가 크게 달라질 수 있습니다.<br />
-                이를 방지하기 위해 Copy Analyzer는 <strong>각 언어별로 3가지 서로 다른 느낌의 번역(짧은, 일반, 길고 격식 있는 형태)을 모두 시뮬레이션</strong>한 후, 그중 디자인 레이아웃에 가장 큰 영향을 미치는 <strong>'가장 긴 글자 수'</strong>를 MAX CHAR로 산출하여 보여줍니다.
+                이를 방지하기 위해 번역도우미는 <strong>각 언어별로 3가지 서로 다른 느낌의 번역(짧은, 일반, 길고 격식 있는 형태)을 모두 시뮬레이션</strong>한 후, 그중 디자인 레이아웃에 가장 큰 영향을 미치는 <strong>'가장 긴 글자 수'</strong>를 MAX CHAR로 산출하여 보여줍니다.
               </div>
             </div>
           )}

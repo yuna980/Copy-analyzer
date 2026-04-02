@@ -1,7 +1,5 @@
 "use server";
 
-export const maxDuration = 60;
-
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 export async function processImageAndTranslate(base64Image: string, mimeType: string) {

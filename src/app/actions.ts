@@ -1,6 +1,6 @@
 "use server";
 
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType, GenerationConfig } from "@google/generative-ai";
 import { headers } from "next/headers";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -76,43 +76,43 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
     }
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // 할당된 modelName(20회 초과 시 우회 모델)을 주입합니다.
-    const model = genAI.getGenerativeModel({ 
-      model: modelName,
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: SchemaType.ARRAY,
-          items: {
-            type: SchemaType.OBJECT,
-            properties: {
-              number: { type: SchemaType.STRING },
-              text: { type: SchemaType.STRING },
-              translations: {
-                type: SchemaType.OBJECT,
-                properties: {
-                  스페인어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  프랑스어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  독일어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  러시아어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  아랍어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  포르투갈어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  이탈리아어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  네덜란드어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  폴란드어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  그리스어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  튀르키예어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  힌디어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  베트남어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-                  태국어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
-                }
+    // 할당된 modelName(20회 초과 시 우회 모델)을 기반으로 배열 생성
+    const fallbackModels = [modelName, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+    
+    // 세대 구성(Config)은 모든 모델이 동일하게 공유합니다.
+    const generationConfig: GenerationConfig = {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: SchemaType.ARRAY,
+        items: {
+          type: SchemaType.OBJECT,
+          properties: {
+            number: { type: SchemaType.STRING },
+            text: { type: SchemaType.STRING },
+            translations: {
+              type: SchemaType.OBJECT,
+              properties: {
+                스페인어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                프랑스어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                독일어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                러시아어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                아랍어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                포르투갈어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                이탈리아어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                네덜란드어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                폴란드어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                그리스어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                튀르키예어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                힌디어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                베트남어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                태국어: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
               }
-            },
-            required: ["number", "text", "translations"]
-          }
+            }
+          },
+          required: ["number", "text", "translations"]
         }
       }
-    });
+    };
 
     const prompt = `
 You are an expert copywriter and translator. An image containing text is provided.
@@ -133,12 +133,24 @@ Each object must exactly have these 3 keys:
 - "translations": An object storing the translated string mapped to its respective language name IN KOREAN as the key (e.g., "스페인어", "프랑스어", "이탈리아어", "독일어", etc.). Provide the translated string for ALL requested languages.
 `;
 
-    // 503 서비스 지연(High demand) 발생 시 최대 3번까지 자동 재시도하는 로직 적용
-    const MAX_RETRIES = 3;
+    // 503 서비스 지연(High demand) 발생 시 실시간으로 더 안정적인 이전 모델로 갈아타는 스마트 폴백 전략
     let result;
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    let lastError;
+    
+    for (let attempt = 0; attempt < fallbackModels.length; attempt++) {
       try {
-        result = await model.generateContent([
+        const currentModelName = fallbackModels[attempt];
+        
+        // 이전 루프와 동일한 모델이면 스킵(중복 호출 방지)
+        if (attempt > 0 && currentModelName === fallbackModels[attempt - 1]) continue;
+        
+        console.log(`[분석 시도] 사용 모델: ${currentModelName}`);
+        const currentModel = genAI.getGenerativeModel({
+          model: currentModelName,
+          generationConfig
+        });
+        
+        result = await currentModel.generateContent([
           prompt,
           {
             inlineData: {
@@ -147,20 +159,23 @@ Each object must exactly have these 3 keys:
             },
           },
         ]);
-        break; // 성공하면 루프 탈출
+        break; // 성공하면 즉시 루프 탈출
       } catch (err: any) {
-        if (err.status === 503 || err.message?.includes("503") || err.message?.includes("High demand") || err.message?.includes("high demand")) {
-          if (attempt === MAX_RETRIES) throw err;
-          console.log(`[Google API 503 에러] 서버 지연으로 인해 재시도합니다... (${attempt}/${MAX_RETRIES})`);
-          await new Promise((resolve) => setTimeout(resolve, 2000)); // 2초 대기 후 재시도
+        lastError = err;
+        if (err.status === 503 || err.message?.includes("503") || err.message?.includes("high demand") || err.message?.includes("High demand")) {
+          console.log(`[Google API 503 에러] ${fallbackModels[attempt]} 서버 지연 감지. 즉시 다음 안정화 모델로 우회합니다...`);
+          // 다음 모델 루프로 넘어가기 전에 약간의 쿨다운 타임
+          await new Promise((resolve) => setTimeout(resolve, 500)); 
+          continue; // 실패 시 다음 안정적인 모델로 바로 루프 재배정
         } else {
+          // 503이 아닌 치명적 에러(예: API키 오류 등)는 즉시 중단
           throw err;
         }
       }
     }
 
     if (!result || !result.response) {
-       throw new Error("결과를 성공적으로 가져오지 못했습니다.");
+       throw lastError || new Error("서버 폭주로 인해 모든 백업 AI 모델이 응답하지 않습니다. 잠시 후 1분 뒤에 다시 시도해주세요.");
     }
 
     const text = result.response.text();

@@ -58,6 +58,9 @@ export default function AdminPage() {
   const [pwChangeMsg, setPwChangeMsg] = useState("");
   const [pwChangeError, setPwChangeError] = useState("");
 
+  // 상세 이미지 더블클릭 모달
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   // ===== 핀 입력 핸들러 (재사용) =====
   const handlePinChange = useCallback(
     (
@@ -363,6 +366,8 @@ export default function AdminPage() {
                             src={t.thumbnail}
                             alt="thumb"
                             className={styles.thumbImage}
+                            style={{ cursor: 'zoom-in' }}
+                            onDoubleClick={() => setSelectedImage(t.thumbnail)}
                           />
                         ) : (
                           <div className={styles.noThumb}>🖼️</div>
@@ -541,6 +546,17 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* 🖼️ 이미지 확대 모달 */}
+      {selectedImage && (
+        <div 
+          className={styles.imageModalOverlay} 
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className={styles.imageModalClose}>&times;</div>
+          <img src={selectedImage} alt="Expanded preview" className={styles.imageModalImg} />
+        </div>
+      )}
     </div>
   );
 }

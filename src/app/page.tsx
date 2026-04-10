@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Turnstile } from '@marsidev/react-turnstile';
 import * as XLSX from 'xlsx';
 import { processImageAndTranslate } from "./actions";
@@ -49,6 +49,25 @@ export default function Home() {
   const [results, setResults] = useState<TranslationResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+
+  // 팝업 로직
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [hideWelcomeChecked, setHideWelcomeChecked] = useState(false);
+
+  useEffect(() => {
+    // 클라이언트 마운트 시 로컬스토리지 확인
+    const isHidden = localStorage.getItem("hide_welcome_popup") === "true";
+    if (!isHidden) {
+      setShowWelcome(true);
+    }
+  }, []);
+
+  const closeWelcome = () => {
+    if (hideWelcomeChecked) {
+      localStorage.setItem("hide_welcome_popup", "true");
+    }
+    setShowWelcome(false);
+  };
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -254,7 +273,50 @@ export default function Home() {
             </div>
           )}
         </div>
+        </div>
       </div>
+
+      {/* 웰컴 팝업 모달 */}
+      {showWelcome && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>👋 Copy Analyzer에 오신 것을 환영합니다!</h2>
+            </div>
+            
+            <div className={styles.modalBody}>
+              <p className={styles.modalText}>
+                넘버링 한 이미지를 올리면 <strong>각 텍스트 단위로 글자수</strong>를 세어주고,<br />
+                해외 14개 언어로 번역했을 때 <strong>가장 긴 글자 수</strong>를 산출해 알려주는 서비스입니다.
+              </p>
+              
+              <div className={styles.modalNotice}>
+                다만, 번역이라는 게 어투나 상황에 따라 달라질 수 있기 때문에 결과가 <strong>무조건 완벽한 것은 아닙니다. 😅</strong><br />
+                디자인 작업을 위한 <span style={{ color: '#60a5fa' }}>여백 확보 참고용</span>으로 사용해주시면 감사하겠습니다!
+              </div>
+
+              <div className={styles.modalWarning}>
+                🚨 <strong>주의:</strong> 서비스 안정을 위해 여러분의 번역 시도 결과와 IP 정보는 모니터링됩니다.
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <label className={styles.checkboxLabel}>
+                <input 
+                  type="checkbox" 
+                  checked={hideWelcomeChecked} 
+                  onChange={(e) => setHideWelcomeChecked(e.target.checked)} 
+                />
+                <span className={styles.checkboxText}>다시 보지 않기</span>
+              </label>
+              
+              <button className={styles.modalBtn} onClick={closeWelcome}>
+                확인했습니다
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

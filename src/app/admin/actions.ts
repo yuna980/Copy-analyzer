@@ -28,6 +28,13 @@ export async function getDashboardData() {
   const krTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const today = krTime.toISOString().split("T")[0];
 
+  // 🧹 7일 이상 된 번역 로그 자동 삭제
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  await supabase
+    .from("translation_logs")
+    .delete()
+    .lt("created_at", sevenDaysAgo.toISOString());
+
   // 한국 시간 기준 오늘 범위 (UTC 변환)
   const krMidnight = new Date(`${today}T00:00:00+09:00`);
   const krEndOfDay = new Date(`${today}T23:59:59.999+09:00`);

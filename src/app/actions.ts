@@ -4,6 +4,7 @@ import { GoogleGenerativeAI, SchemaType, GenerationConfig } from "@google/genera
 import { headers } from "next/headers";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { createClient } from "@supabase/supabase-js";
 
 // =====================================================================
 // 🔄 동적 모델 탐색 시스템 (Dynamic Model Discovery)
@@ -348,32 +349,21 @@ Each object must exactly have these 3 keys:
       });
     }
     
-    // ===== 📊 백오피스용 번역 로그 기록 =====
+    // ===== 📊 백오피스용 번역 로그 기록 (Supabase) =====
     try {
-      const logRedisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-      const logRedisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-      if (logRedisUrl && logRedisToken) {
-        const logRedis = new Redis({ url: logRedisUrl, token: logRedisToken });
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
         const recordId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const krNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-        const todayStr = krNow.toISOString().split("T")[0];
 
-        const record = {
+        await supabase.from('translation_logs').insert({
           id: recordId,
-          timestamp: new Date().toISOString(),
           thumbnail: thumbnail || null,
-          modelUsed: usedModelName,
+          model_used: usedModelName,
           success: true,
-        };
-
-        await logRedis.lpush("translation_log", JSON.stringify(record));
-        await logRedis.ltrim("translation_log", 0, 499); // 최근 500건만 보관
-        await logRedis.set(`translation:${recordId}`, JSON.stringify(data), { ex: 7 * 86400 }); // 7일 TTL
-        await logRedis.hincrby(`model_usage:${todayStr}`, usedModelName, 1);
-        await logRedis.expire(`model_usage:${todayStr}`, 86400 * 2);
-        // 대시보드용 성공 카운터
-        await logRedis.incr(`daily_success:${todayStr}`);
-        await logRedis.expire(`daily_success:${todayStr}`, 86400 * 2);
+          result_data: data,
+        });
       }
     } catch (logErr) {
       console.error("[번역 로그 기록 실패]", logErr);
@@ -383,28 +373,21 @@ Each object must exactly have these 3 keys:
   } catch (error: any) {
     console.error("Gemini Translation Length Error:", error);
 
-    // ===== 📊 실패 로그도 기록 =====
+    // ===== 📊 실패 로그도 기록 (Supabase) =====
     try {
-      const logRedisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-      const logRedisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-      if (logRedisUrl && logRedisToken) {
-        const logRedis = new Redis({ url: logRedisUrl, token: logRedisToken });
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseKey = process.env.SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseKey) {
+        const supabase = createClient(supabaseUrl, supabaseKey);
         const recordId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        const record = {
+
+        await supabase.from('translation_logs').insert({
           id: recordId,
-          timestamp: new Date().toISOString(),
           thumbnail: thumbnail || null,
-          modelUsed: "N/A",
+          model_used: 'N/A',
           success: false,
-          errorMessage: error.message,
-        };
-        await logRedis.lpush("translation_log", JSON.stringify(record));
-        await logRedis.ltrim("translation_log", 0, 499);
-        // 대시보드용 실패 카운터
-        const krNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-        const todayStr = krNow.toISOString().split("T")[0];
-        await logRedis.incr(`daily_fail:${todayStr}`);
-        await logRedis.expire(`daily_fail:${todayStr}`, 86400 * 2);
+          error_message: error.message,
+        });
       }
     } catch (logErr) {
       console.error("[실패 로그 기록 실패]", logErr);

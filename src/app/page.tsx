@@ -79,7 +79,10 @@ export default function Home() {
       const pureBase64Data = compressedImageFull.split(",")[1];
       const mimeType = compressedImageFull.substring(compressedImageFull.indexOf(":") + 1, compressedImageFull.indexOf(";"));
 
-      const response = await processImageAndTranslate(pureBase64Data, mimeType, turnstileToken);
+      // 백오피스 미리보기용 소형 썸네일 생성 (150px, Redis 저장용)
+      const thumbnailDataUrl = await compressImage(imagePreview, 150);
+
+      const response = await processImageAndTranslate(pureBase64Data, mimeType, turnstileToken, thumbnailDataUrl);
       if (response.success) {
         setResults(response.data);
       } else {

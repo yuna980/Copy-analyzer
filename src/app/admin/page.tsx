@@ -1,0 +1,545 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import * as XLSX from "xlsx";
+import {
+  verifyAdminPassword,
+  getDashboardData,
+  getTranslationHistory,
+  getTranslationById,
+  getCurrentPassword,
+  changeAdminPassword,
+} from "./actions";
+import styles from "./page.module.css";
+
+// ===== 타입 정의 =====
+interface TranslationRecord {
+  id: string;
+  timestamp: string;
+  thumbnail: string | null;
+  modelUsed: string;
+  success: boolean;
+  errorMessage?: string;
+}
+
+interface DashboardData {
+  dailyCount: number;
+  modelUsage: Record<string, number>;
+  date: string;
+}
+
+// ===== 메인 컴포넌트 =====
+export default function AdminPage() {
+  // 인증 상태
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [pin, setPin] = useState(["", "", "", ""]);
+  const [loginError, setLoginError] = useState("");
+  const pinRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // 대시보드 & 탭
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [activeTab, setActiveTab] = useState<"history" | "password">("history");
+
+  // 번역 이력
+  const [translations, setTranslations] = useState<TranslationRecord[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+
+  // 비밀번호 설정 탭
+  const [pwTabUnlocked, setPwTabUnlocked] = useState(false);
+  const [pwTabPin, setPwTabPin] = useState(["", "", "", ""]);
+  const pwTabPinRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [pwTabError, setPwTabError] = useState("");
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwChangeMsg, setPwChangeMsg] = useState("");
+  const [pwChangeError, setPwChangeError] = useState("");
+
+  // ===== 핀 입력 핸들러 (재사용) =====
+  const handlePinChange = useCallback(
+    (
+      index: number,
+      value: string,
+      setter: React.Dispatch<React.SetStateAction<string[]>>,
+      refs: React.MutableRefObject<(HTMLInputElement | null)[]>
+    ) => {
+      if (!/^\d*$/.test(value)) return;
+      const digit = value.slice(-1);
+      setter((prev) => {
+        const next = [...prev];
+        next[index] = digit;
+        return next;
+      });
+      if (digit && index < 3) {
+        refs.current[index + 1]?.focus();
+      }
+    },
+    []
+  );
+
+  const handlePinKeyDown = useCallback(
+    (
+      e: React.KeyboardEvent<HTMLInputElement>,
+      index: number,
+      getter: string[],
+      refs: React.MutableRefObject<(HTMLInputElement | null)[]>
+    ) => {
+      if (e.key === "Backspace" && !getter[index] && index > 0) {
+        refs.current[index - 1]?.focus();
+      }
+    },
+    []
+  );
+
+  // ===== 로그인 =====
+  const handleLogin = async () => {
+    const password = pin.join("");
+    if (password.length !== 4) return;
+    setLoginError("");
+    const valid = await verifyAdminPassword(password);
+    if (valid) {
+      setIsAuthenticated(true);
+    } else {
+      setLoginError("비밀번호가 일치하지 않습니다.");
+      setPin(["", "", "", ""]);
+      pinRefs.current[0]?.focus();
+    }
+  };
+
+  // ===== 대시보드 & 이력 로드 =====
+  const loadDashboard = useCallback(async () => {
+    try {
+      const data = await getDashboardData();
+      setDashboard(data);
+    } catch (err) {
+      console.error("대시보드 로드 실패:", err);
+    }
+  }, []);
+
+  const loadHistory = useCallback(async (page: number) => {
+    try {
+      const data = await getTranslationHistory(page, 10);
+      setTranslations(data.translations);
+      setHistoryTotal(data.total);
+      setHistoryPage(page);
+    } catch (err) {
+      console.error("이력 로드 실패:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadDashboard();
+      loadHistory(1);
+    }
+  }, [isAuthenticated, loadDashboard, loadHistory]);
+
+  // ===== 엑셀 다운로드 =====
+  const handleDownloadResult = async (id: string, timestamp: string) => {
+    try {
+      const data = await getTranslationById(id);
+      if (!data || !Array.isArray(data)) {
+        alert("번역 데이터가 만료되었거나 존재하지 않습니다. (7일 보관)");
+        return;
+      }
+      const excelData = data.map((row: any) => ({
+        Number: row.number,
+        Text: row.text,
+        "MAX CHAR": row.textCharCount,
+        Note: row.note,
+        "Translate Text": row.translateText,
+        "TRANSLATE MAX CHAR": row.guide,
+      }));
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      ws["!cols"] = [
+        { wch: 10 },
+        { wch: 40 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 50 },
+        { wch: 20 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Translation");
+      const dateStr = timestamp.split("T")[0];
+      XLSX.writeFile(wb, `translation_${dateStr}_${id.slice(0, 8)}.xlsx`);
+    } catch (err) {
+      console.error("다운로드 실패:", err);
+      alert("다운로드에 실패했습니다.");
+    }
+  };
+
+  // ===== 비밀번호 탭 잠금해제 =====
+  const handlePwTabUnlock = async () => {
+    const password = pwTabPin.join("");
+    if (password.length !== 4) return;
+    setPwTabError("");
+    const res = await getCurrentPassword(password);
+    if (res.success && res.password) {
+      setPwTabUnlocked(true);
+      setCurrentPw(res.password);
+    } else {
+      setPwTabError("비밀번호가 일치하지 않습니다.");
+      setPwTabPin(["", "", "", ""]);
+      pwTabPinRefs.current[0]?.focus();
+    }
+  };
+
+  // ===== 비밀번호 변경 =====
+  const handleChangePassword = async () => {
+    setPwChangeMsg("");
+    setPwChangeError("");
+
+    if (!/^\d{4}$/.test(newPw)) {
+      setPwChangeError("새 비밀번호는 4자리 숫자여야 합니다.");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setPwChangeError("새 비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
+    const res = await changeAdminPassword(currentPw, newPw);
+    if (res.success) {
+      setCurrentPw(newPw);
+      setNewPw("");
+      setConfirmPw("");
+      setPwChangeMsg("비밀번호가 성공적으로 변경되었습니다.");
+    } else {
+      setPwChangeError(res.error || "변경에 실패했습니다.");
+    }
+  };
+
+  // ===== 시간 포맷 =====
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    const kr = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    const mm = String(kr.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(kr.getUTCDate()).padStart(2, "0");
+    const hh = String(kr.getUTCHours()).padStart(2, "0");
+    const mi = String(kr.getUTCMinutes()).padStart(2, "0");
+    return `${mm}/${dd} ${hh}:${mi}`;
+  };
+
+  // ===== 렌더: 로그인 화면 =====
+  if (!isAuthenticated) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loginWrapper}>
+          <div className={styles.loginCard}>
+            <div className={styles.loginIcon}>🔐</div>
+            <h1 className={styles.loginTitle}>Admin Access</h1>
+            <p className={styles.loginSubtitle}>
+              백오피스 접근을 위해 비밀번호를 입력하세요
+            </p>
+            <div className={styles.pinInputRow}>
+              {pin.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => { pinRefs.current[i] = el; }}
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  className={styles.pinDigit}
+                  onChange={(e) =>
+                    handlePinChange(i, e.target.value, setPin, pinRefs)
+                  }
+                  onKeyDown={(e) => handlePinKeyDown(e, i, pin, pinRefs)}
+                  onKeyUp={(e) => {
+                    if (e.key === "Enter" && pin.every((d) => d)) handleLogin();
+                  }}
+                />
+              ))}
+            </div>
+            <button className={styles.loginButton} onClick={handleLogin}>
+              접속하기
+            </button>
+            {loginError && (
+              <div className={styles.loginError}>{loginError}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== 렌더: 대시보드 =====
+  const totalPages = Math.ceil(historyTotal / 10);
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.content}>
+        {/* 헤더 */}
+        <div className={styles.header}>
+          <h1 className={styles.pageTitle}>📊 Copy Analyzer 백오피스</h1>
+          <button
+            className={styles.logoutButton}
+            onClick={() => {
+              setIsAuthenticated(false);
+              setPin(["", "", "", ""]);
+              setPwTabUnlocked(false);
+            }}
+          >
+            로그아웃
+          </button>
+        </div>
+
+        {/* 대시보드 카드 */}
+        {dashboard && (
+          <div className={styles.dashboardGrid}>
+            <div className={styles.statCard}>
+              <div className={styles.statLabel}>오늘 번역 수</div>
+              <div className={styles.statValue}>{dashboard.dailyCount}</div>
+              <div className={styles.statDate}>{dashboard.date}</div>
+            </div>
+            <div className={styles.statCard}>
+              <div className={styles.statLabel}>
+                사용된 AI 모델 & 모델별 번역 수
+              </div>
+              <div className={styles.modelList}>
+                {Object.keys(dashboard.modelUsage).length > 0 ? (
+                  Object.entries(dashboard.modelUsage)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([model, count]) => (
+                      <div key={model} className={styles.modelRow}>
+                        <span className={styles.modelName}>{model}</span>
+                        <span className={styles.modelCount}>{count}회</span>
+                      </div>
+                    ))
+                ) : (
+                  <div className={styles.emptyModelText}>
+                    오늘 사용된 모델이 없습니다
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 탭 바 */}
+        <div className={styles.tabBar}>
+          <button
+            className={
+              activeTab === "history" ? styles.tabActive : styles.tab
+            }
+            onClick={() => setActiveTab("history")}
+          >
+            📋 번역 조회
+          </button>
+          <button
+            className={
+              activeTab === "password" ? styles.tabActive : styles.tab
+            }
+            onClick={() => setActiveTab("password")}
+          >
+            🔑 비밀번호 설정
+          </button>
+        </div>
+
+        {/* 탭 내용: 번역 조회 */}
+        {activeTab === "history" && (
+          <>
+            <table className={styles.historyTable}>
+              <thead>
+                <tr>
+                  <th>시간</th>
+                  <th>이미지</th>
+                  <th>번역 데이터</th>
+                  <th>사용 모델</th>
+                  <th>성공 여부</th>
+                </tr>
+              </thead>
+              <tbody>
+                {translations.length > 0 ? (
+                  translations.map((t) => (
+                    <tr key={t.id}>
+                      <td>{formatTime(t.timestamp)}</td>
+                      <td>
+                        {t.thumbnail ? (
+                          <img
+                            src={t.thumbnail}
+                            alt="thumb"
+                            className={styles.thumbImage}
+                          />
+                        ) : (
+                          <div className={styles.noThumb}>🖼️</div>
+                        )}
+                      </td>
+                      <td>
+                        {t.success ? (
+                          <button
+                            className={styles.downloadLink}
+                            onClick={() =>
+                              handleDownloadResult(t.id, t.timestamp)
+                            }
+                          >
+                            📥 엑셀 다운로드
+                          </button>
+                        ) : (
+                          <span className={styles.expiredText}>
+                            {t.errorMessage || "데이터 없음"}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={styles.modelTag}>{t.modelUsed}</span>
+                      </td>
+                      <td>
+                        {t.success ? (
+                          <span className={styles.badgeSuccess}>성공</span>
+                        ) : (
+                          <span className={styles.badgeFail}>실패</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className={styles.emptyRow}>
+                      번역 기록이 없습니다.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  className={styles.pageButton}
+                  disabled={historyPage <= 1}
+                  onClick={() => loadHistory(historyPage - 1)}
+                >
+                  ← 이전
+                </button>
+                <span className={styles.pageInfo}>
+                  {historyPage} / {totalPages}
+                </span>
+                <button
+                  className={styles.pageButton}
+                  disabled={historyPage >= totalPages}
+                  onClick={() => loadHistory(historyPage + 1)}
+                >
+                  다음 →
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 탭 내용: 비밀번호 설정 */}
+        {activeTab === "password" && (
+          <div className={styles.passwordSection}>
+            {!pwTabUnlocked ? (
+              <div className={styles.passwordCard}>
+                <div className={styles.loginIcon}>🔑</div>
+                <h2
+                  className={styles.loginTitle}
+                  style={{ fontSize: "1.2rem", marginBottom: "0.3rem" }}
+                >
+                  비밀번호 확인
+                </h2>
+                <p
+                  className={styles.loginSubtitle}
+                  style={{ marginBottom: "1.5rem" }}
+                >
+                  설정 변경을 위해 현재 비밀번호를 입력하세요
+                </p>
+                <div className={styles.pinInputRow}>
+                  {pwTabPin.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => { pwTabPinRefs.current[i] = el; }}
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      className={styles.pinDigit}
+                      onChange={(e) =>
+                        handlePinChange(
+                          i,
+                          e.target.value,
+                          setPwTabPin,
+                          pwTabPinRefs
+                        )
+                      }
+                      onKeyDown={(e) =>
+                        handlePinKeyDown(e, i, pwTabPin, pwTabPinRefs)
+                      }
+                      onKeyUp={(e) => {
+                        if (e.key === "Enter" && pwTabPin.every((d) => d))
+                          handlePwTabUnlock();
+                      }}
+                    />
+                  ))}
+                </div>
+                <button
+                  className={styles.loginButton}
+                  onClick={handlePwTabUnlock}
+                >
+                  확인
+                </button>
+                {pwTabError && (
+                  <div className={styles.loginError}>{pwTabError}</div>
+                )}
+              </div>
+            ) : (
+              <div className={styles.passwordCard}>
+                <div className={styles.passwordLabel}>현재 비밀번호</div>
+                <div className={styles.passwordDisplay}>{currentPw}</div>
+
+                <div className={styles.fieldGroup}>
+                  <div className={styles.fieldLabel}>새 비밀번호 (4자리 숫자)</div>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPw}
+                    onChange={(e) => {
+                      if (/^\d*$/.test(e.target.value)) setNewPw(e.target.value);
+                    }}
+                    className={styles.passwordInput}
+                    placeholder="••••"
+                  />
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <div className={styles.fieldLabel}>새 비밀번호 확인</div>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={confirmPw}
+                    onChange={(e) => {
+                      if (/^\d*$/.test(e.target.value))
+                        setConfirmPw(e.target.value);
+                    }}
+                    className={styles.passwordInput}
+                    placeholder="••••"
+                  />
+                </div>
+
+                <button
+                  className={styles.saveButton}
+                  onClick={handleChangePassword}
+                >
+                  비밀번호 변경
+                </button>
+
+                {pwChangeMsg && (
+                  <div className={styles.successMsg}>{pwChangeMsg}</div>
+                )}
+                {pwChangeError && (
+                  <div className={styles.errorMsg}>{pwChangeError}</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

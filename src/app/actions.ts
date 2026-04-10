@@ -104,7 +104,7 @@ function getHardcodedFallback(): string[] {
   return ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"];
 }
 
-export async function processImageAndTranslate(base64Image: string, mimeType: string, turnstileToken?: string | null) {
+export async function processImageAndTranslate(base64Image: string, mimeType: string, turnstileToken?: string | null, thumbnail?: string | null) {
   try {
     // 1단계: Cloudflare Turnstile 봇(스크립트) 접근 검증
     const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
@@ -261,6 +261,7 @@ Each object must exactly have these 3 keys:
     // 모든 에러(404/429/503)에 자동 대응하는 스마트 폴백 전략
     let result;
     let lastError;
+    let usedModelName = "unknown";
     
     for (let attempt = 0; attempt < fallbackModels.length; attempt++) {
       try {
@@ -281,6 +282,7 @@ Each object must exactly have these 3 keys:
             },
           },
         ]);
+        usedModelName = currentModelName; // 성공한 모델명 기록
         break; // 성공하면 즉시 루프 탈출
       } catch (err: any) {
         lastError = err;
@@ -346,9 +348,60 @@ Each object must exactly have these 3 keys:
       });
     }
     
+    // ===== 📊 백오피스용 번역 로그 기록 =====
+    try {
+      const logRedisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+      const logRedisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+      if (logRedisUrl && logRedisToken) {
+        const logRedis = new Redis({ url: logRedisUrl, token: logRedisToken });
+        const recordId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const krNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const todayStr = krNow.toISOString().split("T")[0];
+
+        const record = {
+          id: recordId,
+          timestamp: new Date().toISOString(),
+          thumbnail: thumbnail || null,
+          modelUsed: usedModelName,
+          success: true,
+        };
+
+        await logRedis.lpush("translation_log", JSON.stringify(record));
+        await logRedis.ltrim("translation_log", 0, 499); // 최근 500건만 보관
+        await logRedis.set(`translation:${recordId}`, JSON.stringify(data), { ex: 7 * 86400 }); // 7일 TTL
+        await logRedis.hincrby(`model_usage:${todayStr}`, usedModelName, 1);
+        await logRedis.expire(`model_usage:${todayStr}`, 86400 * 2);
+      }
+    } catch (logErr) {
+      console.error("[번역 로그 기록 실패]", logErr);
+    }
+
     return { success: true, data };
   } catch (error: any) {
     console.error("Gemini Translation Length Error:", error);
+
+    // ===== 📊 실패 로그도 기록 =====
+    try {
+      const logRedisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+      const logRedisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+      if (logRedisUrl && logRedisToken) {
+        const logRedis = new Redis({ url: logRedisUrl, token: logRedisToken });
+        const recordId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const record = {
+          id: recordId,
+          timestamp: new Date().toISOString(),
+          thumbnail: thumbnail || null,
+          modelUsed: "N/A",
+          success: false,
+          errorMessage: error.message,
+        };
+        await logRedis.lpush("translation_log", JSON.stringify(record));
+        await logRedis.ltrim("translation_log", 0, 499);
+      }
+    } catch (logErr) {
+      console.error("[실패 로그 기록 실패]", logErr);
+    }
+
     return { success: false, error: error.message };
   }
 }

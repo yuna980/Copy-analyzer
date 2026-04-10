@@ -23,8 +23,9 @@ export async function getDashboardData() {
   const krTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const today = krTime.toISOString().split("T")[0];
 
-  // 일일 번역 수
-  const dailyCount = (await redis.get<number>(`daily_global_clicks_${today}`)) || 0;
+  // 일일 성공/실패 카운터 (번역 로그 기록 시 함께 증가)
+  const successCount = (await redis.get<number>(`daily_success:${today}`)) || 0;
+  const failCount = (await redis.get<number>(`daily_fail:${today}`)) || 0;
 
   // 모델별 사용 통계 (Redis Hash)
   const rawModelUsage = await redis.hgetall<Record<string, string>>(`model_usage:${today}`);
@@ -35,7 +36,7 @@ export async function getDashboardData() {
     }
   }
 
-  return { dailyCount, modelUsage, date: today };
+  return { successCount, failCount, modelUsage, date: today };
 }
 
 // ===== 번역 이력 조회 =====

@@ -371,6 +371,9 @@ Each object must exactly have these 3 keys:
         await logRedis.set(`translation:${recordId}`, JSON.stringify(data), { ex: 7 * 86400 }); // 7일 TTL
         await logRedis.hincrby(`model_usage:${todayStr}`, usedModelName, 1);
         await logRedis.expire(`model_usage:${todayStr}`, 86400 * 2);
+        // 대시보드용 성공 카운터
+        await logRedis.incr(`daily_success:${todayStr}`);
+        await logRedis.expire(`daily_success:${todayStr}`, 86400 * 2);
       }
     } catch (logErr) {
       console.error("[번역 로그 기록 실패]", logErr);
@@ -397,6 +400,11 @@ Each object must exactly have these 3 keys:
         };
         await logRedis.lpush("translation_log", JSON.stringify(record));
         await logRedis.ltrim("translation_log", 0, 499);
+        // 대시보드용 실패 카운터
+        const krNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const todayStr = krNow.toISOString().split("T")[0];
+        await logRedis.incr(`daily_fail:${todayStr}`);
+        await logRedis.expire(`daily_fail:${todayStr}`, 86400 * 2);
       }
     } catch (logErr) {
       console.error("[실패 로그 기록 실패]", logErr);

@@ -23,7 +23,8 @@ interface TranslationRecord {
 }
 
 interface DashboardData {
-  dailyCount: number;
+  successCount: number;
+  failCount: number;
   modelUsage: Record<string, number>;
   date: string;
 }
@@ -273,17 +274,7 @@ export default function AdminPage() {
       <div className={styles.content}>
         {/* 헤더 */}
         <div className={styles.header}>
-          <h1 className={styles.pageTitle}>📊 Copy Analyzer 백오피스</h1>
-          <button
-            className={styles.logoutButton}
-            onClick={() => {
-              setIsAuthenticated(false);
-              setPin(["", "", "", ""]);
-              setPwTabUnlocked(false);
-            }}
-          >
-            로그아웃
-          </button>
+          <h1 className={styles.pageTitle}>📊 Copy Analyzer Admin</h1>
         </div>
 
         {/* 대시보드 카드 */}
@@ -291,7 +282,14 @@ export default function AdminPage() {
           <div className={styles.dashboardGrid}>
             <div className={styles.statCard}>
               <div className={styles.statLabel}>오늘 번역 수</div>
-              <div className={styles.statValue}>{dashboard.dailyCount}</div>
+              <div className={styles.statValue}>
+                {dashboard.successCount}
+                {dashboard.failCount > 0 && (
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f87171', marginLeft: '0.5rem' }}>
+                    (오류발생 : {dashboard.failCount})
+                  </span>
+                )}
+              </div>
               <div className={styles.statDate}>{dashboard.date}</div>
             </div>
             <div className={styles.statCard}>

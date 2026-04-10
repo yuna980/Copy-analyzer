@@ -61,9 +61,9 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
       } else if (dailyCount <= 40) {
         modelName = "gemini-2.0-flash";
       } else if (dailyCount <= 60) {
-        modelName = "gemini-1.5-flash";
+        modelName = "gemini-2.5-flash-lite";
       } else if (dailyCount <= 80) {
-        modelName = "gemini-1.5-flash-8b"; // 가장 가볍고 할당량이 많은 모델을 마지막 방어선으로 배치
+        modelName = "gemini-2.0-flash-lite"; // 가장 가볍고 할당량이 많은 모델을 마지막 방어선으로 배치
       } else {
         // 총 80회를 넘기면 깔끔하게 사용자에게 안내하고 서버를 보호합니다.
         throw new Error("오늘의 AI 무료 분석 한도(총 80회)가 완전히 소진되었습니다. 서버 비용 보호를 위해 내일 다시 이용해주세요.");
@@ -77,7 +77,7 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
     const genAI = new GoogleGenerativeAI(apiKey);
     
     // 할당된 modelName(20회 초과 시 우회 모델)을 기반으로 배열 생성
-    const fallbackModels = [modelName, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+    const fallbackModels = [modelName, "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"];
     
     // 세대 구성(Config)은 모든 모델이 동일하게 공유합니다.
     const generationConfig: GenerationConfig = {
@@ -169,7 +169,7 @@ Each object must exactly have these 3 keys:
         break; // 성공하면 즉시 루프 탈출
       } catch (err: any) {
         lastError = err;
-        if (err.status === 503 || err.status === 429 || err.message?.includes("503") || err.message?.includes("429") || err.message?.includes("high demand") || err.message?.includes("High demand") || err.message?.includes("Quota")) {
+        if (err.status === 503 || err.status === 429 || err.status === 404 || err.message?.includes("503") || err.message?.includes("429") || err.message?.includes("404") || err.message?.includes("not found") || err.message?.includes("high demand") || err.message?.includes("High demand") || err.message?.includes("Quota")) {
           console.log(`[Google API 에러] ${fallbackModels[attempt]} 서버 지연 또는 할당량(Quota/429) 초과 감지. 즉시 다음 모델로 우회합니다... | 에러: ${err.message?.split('\\n')[0]}`);
           // 다음 모델 루프로 넘어가기 전에 약간의 쿨다운 타임
           await new Promise((resolve) => setTimeout(resolve, 500)); 

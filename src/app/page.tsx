@@ -212,13 +212,13 @@ export default function Home() {
             <div className={styles.tableContainer}>
               <table className={styles.dataTable}>
                 <thead>
-                  <tr>
-                    <th className={styles.centerAlign} style={{ width: '8%' }}>number</th>
+                <tr>
+                    <th className={styles.centerAlign} style={{ width: '6%' }}>number</th>
                     <th style={{ width: '25%' }}>Text</th>
-                    <th className={styles.centerAlign} style={{ width: '10%' }}>MAX CHAR</th>
-                    <th style={{ width: '10%' }}>note</th>
-                    <th style={{ width: '27%' }}>Translate Text</th>
-                    <th className={styles.centerAlign} style={{ width: '20%' }}>TRANSLATE MAX CHAR</th>
+                    <th className={styles.centerAlign} style={{ width: '8%' }}>MAX CHAR</th>
+                    <th style={{ width: '12%' }}>note</th>
+                    <th style={{ width: '33%' }}>Translate Text</th>
+                    <th className={styles.centerAlign} style={{ width: '16%' }}>TRANSLATE MAX CHAR</th>
                   </tr>
                 </thead>
                 <tbody>

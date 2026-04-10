@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Turnstile } from '@marsidev/react-turnstile';
+import * as XLSX from 'xlsx';
 import { processImageAndTranslate } from "./actions";
 import styles from "./page.module.css";
 
@@ -89,6 +90,40 @@ export default function Home() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleDownloadExcel = () => {
+    if (!results || results.length === 0) return;
+
+    // 테이블과 동일한 컬럼 구조로 엑셀 데이터 생성
+    const excelData = results.map((row) => ({
+      'Number': row.number,
+      'Text': row.text,
+      'MAX CHAR': row.textCharCount,
+      'Note': row.note,
+      'Translate Text': row.translateText,
+      'TRANSLATE MAX CHAR': row.guide,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // 컬럼 너비 자동 조절
+    worksheet['!cols'] = [
+      { wch: 10 },  // Number
+      { wch: 40 },  // Text
+      { wch: 12 },  // MAX CHAR
+      { wch: 15 },  // Note
+      { wch: 50 },  // Translate Text
+      { wch: 20 },  // TRANSLATE MAX CHAR
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Translation Results');
+
+    // 파일명에 날짜 포함 (YYYY-MM-DD 형식)
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `copy-analysis_${dateStr}.xlsx`);
   };
 
   return (
@@ -200,6 +235,15 @@ export default function Home() {
                 <strong style={{ color: '#e2e8f0' }}>💡 컬럼 안내</strong><br />
                 <strong>MAX CHAR</strong>: 원문(Text)의 글자 수입니다. 대문자 A 기준으로 카운트합니다. (예: &quot;samsung!&quot; → 8자)<br />
                 <strong>TRANSLATE MAX CHAR</strong>: 14개 언어별 2가지 번역 시뮬레이션(간결한 UI 텍스트, 자연스러운 UI 텍스트) 중 <strong>가장 긴 글자 수</strong>를 산출한 값입니다. 디자인 레이아웃 검토 시 이 값을 기준으로 여유 공간을 확보하세요.
+              </div>
+              {/* 엑셀 다운로드 버튼 */}
+              <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+                <button
+                  onClick={handleDownloadExcel}
+                  className={styles.downloadButton}
+                >
+                  📥 엑셀로 내려받기
+                </button>
               </div>
             </div>
           )}

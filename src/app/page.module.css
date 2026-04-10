@@ -255,3 +255,26 @@
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.downloadButton {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.85rem 2.2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 8px 15px -3px rgba(16, 185, 129, 0.35);
+  letter-spacing: 0.02em;
+}
+
+.downloadButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px -4px rgba(16, 185, 129, 0.5);
+}
+
+.downloadButton:active {
+  transform: translateY(0);
+}

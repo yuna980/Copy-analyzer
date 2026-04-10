@@ -5,6 +5,105 @@ import { headers } from "next/headers";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
+// =====================================================================
+// 🔄 동적 모델 탐색 시스템 (Dynamic Model Discovery)
+// Google API에서 실시간으로 사용 가능한 모델 목록을 가져와서
+// 모델 폐기(deprecation)로 인한 404 에러를 영구적으로 방지합니다.
+// =====================================================================
+
+interface ModelInfo {
+  name: string;        // e.g. "models/gemini-2.5-flash"
+  displayName: string;
+  supportedGenerationMethods: string[];
+}
+
+// 메모리 캐시: 서버 인스턴스 수명 동안 모델 목록을 캐싱 (5분 TTL)
+let cachedModels: string[] | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
+
+/**
+ * Google의 listModels API를 호출해서 현재 사용 가능한 flash 계열 모델을 동적으로 가져옴.
+ * - generateContent를 지원하는 모델만 필터링
+ * - flash 계열만 선별 (비용 효율 극대화)
+ * - 결과를 5분간 캐싱하여 매 요청마다 API를 때리지 않음
+ */
+async function getAvailableFlashModels(apiKey: string): Promise<string[]> {
+  // 캐시가 유효하면 즉시 반환
+  if (cachedModels && (Date.now() - cacheTimestamp) < CACHE_TTL_MS) {
+    return cachedModels;
+  }
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      { next: { revalidate: 300 } } // Next.js fetch 캐시도 5분
+    );
+
+    if (!res.ok) {
+      console.warn(`[모델 탐색] listModels API 실패 (${res.status}), 하드코딩 폴백 사용`);
+      return getHardcodedFallback();
+    }
+
+    const json = await res.json();
+    const allModels: ModelInfo[] = json.models || [];
+
+    // 1단계: generateContent 지원 + flash 계열만 필터링
+    const flashModels = allModels
+      .filter((m) =>
+        m.supportedGenerationMethods?.includes("generateContent") &&
+        m.name.includes("flash")
+      )
+      .map((m) => m.name.replace("models/", "")); // "models/gemini-2.5-flash" → "gemini-2.5-flash"
+
+    if (flashModels.length === 0) {
+      console.warn("[모델 탐색] 사용 가능한 flash 모델이 없음, 하드코딩 폴백 사용");
+      return getHardcodedFallback();
+    }
+
+    // 2단계: 우선순위 정렬 (최신 & 고성능 우선, lite는 후순위)
+    const priorityOrder = [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-2.5-flash-lite",
+      "gemini-2.0-flash-lite",
+    ];
+
+    const sorted: string[] = [];
+    // 먼저 우선순위에 매칭되는 모델을 순서대로 추가
+    for (const preferred of priorityOrder) {
+      const match = flashModels.find((m) => m === preferred);
+      if (match) sorted.push(match);
+    }
+    // 우선순위에 없는 새로운 flash 모델도 자동으로 뒤에 추가 (미래 모델 자동 대응)
+    for (const model of flashModels) {
+      if (!sorted.includes(model) && !model.includes("preview") && !model.includes("exp")) {
+        sorted.push(model);
+      }
+    }
+
+    console.log(`[모델 탐색] 사용 가능한 flash 모델 ${sorted.length}개 발견: ${sorted.join(", ")}`);
+
+    // 캐시 갱신
+    cachedModels = sorted;
+    cacheTimestamp = Date.now();
+
+    return sorted;
+  } catch (error) {
+    console.warn("[모델 탐색] API 호출 실패, 하드코딩 폴백 사용:", error);
+    return getHardcodedFallback();
+  }
+}
+
+/**
+ * listModels API 자체가 실패했을 때의 최후 방어선.
+ * 이 목록도 시간이 지나면 폐기될 수 있지만,
+ * 정상적인 경우 listModels가 항상 동적 목록을 제공하므로 여기까지 올 일은 거의 없음.
+ */
+function getHardcodedFallback(): string[] {
+  return ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"];
+}
+
 export async function processImageAndTranslate(base64Image: string, mimeType: string, turnstileToken?: string | null) {
   try {
     // 1단계: Cloudflare Turnstile 봇(스크립트) 접근 검증
@@ -20,11 +119,21 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
       if (!data.success) throw new Error("자동화 봇으로 의심되어 차단되었습니다.");
     }
 
+    // 런타임 호출 시점에 API 키를 로드하여 캐싱/undefined 문제를 방지합니다.
+    const apiKey = process.env.NEXT_PRIVATE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("API 키가 환경 변수에 설정되지 않았습니다.");
+    }
+
+    // ===== 🔄 동적 모델 목록 로딩 (Google API에서 실시간 조회) =====
+    const availableModels = await getAvailableFlashModels(apiKey);
+
     // ===== Upstash Redis 연동 구역 (Rate Limit & 일일 모델 폴백) =====
     const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
     const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
     
-    let modelName = "gemini-2.5-flash"; // 기본 할당 모델 설정
+    // 기본 모델은 동적 목록의 첫 번째 (가장 고성능)
+    let primaryModelIndex = 0;
     
     if (redisUrl && redisToken) {
       const redis = new Redis({ url: redisUrl, token: redisToken });
@@ -43,7 +152,7 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
         throw new Error("API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요 (1시간 당 제한).");
       }
       
-      // 2. 전체 유저 대상 하루 20회 초과 시 다른 Gemini 모델로 자동 스위칭 (과금/리밋 방어)
+      // 2. 전체 유저 대상 하루 N회 초과 시 다른 Gemini 모델로 자동 스위칭 (과금/리밋 방어)
       // 한국 시간 기준으로 날짜 가져오기 (YYYY-MM-DD 형식)
       const now = new Date();
       const krTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
@@ -56,28 +165,37 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
       }
       
       // 구간별로 모델을 순차적으로 우회 (모델별 무료 할당량을 영혼까지 끌어쓰기)
-      if (dailyCount <= 20) {
-        modelName = "gemini-2.5-flash";
-      } else if (dailyCount <= 40) {
-        modelName = "gemini-2.0-flash";
-      } else if (dailyCount <= 60) {
-        modelName = "gemini-2.5-flash-lite";
-      } else if (dailyCount <= 80) {
-        modelName = "gemini-2.0-flash-lite"; // 가장 가볍고 할당량이 많은 모델을 마지막 방어선으로 배치
-      } else {
-        // 총 80회를 넘기면 깔끔하게 사용자에게 안내하고 서버를 보호합니다.
-        throw new Error("오늘의 AI 무료 분석 한도(총 80회)가 완전히 소진되었습니다. 서버 비용 보호를 위해 내일 다시 이용해주세요.");
+      // 동적으로 가져온 모델 수에 맞춰 자동으로 구간을 나눔
+      const REQUESTS_PER_MODEL = 20;
+      const maxRequests = availableModels.length * REQUESTS_PER_MODEL;
+      
+      if (dailyCount > maxRequests) {
+        throw new Error(`오늘의 AI 무료 분석 한도(총 ${maxRequests}회)가 완전히 소진되었습니다. 서버 비용 보호를 위해 내일 다시 이용해주세요.`);
       }
+      
+      // 20회 단위로 다음 모델로 자동 스위칭
+      primaryModelIndex = Math.min(
+        Math.floor((dailyCount - 1) / REQUESTS_PER_MODEL),
+        availableModels.length - 1
+      );
     }
-    // 런타임 호출 시점에 API 키를 로드하여 캐싱/undefined 문제를 방지합니다.
-    const apiKey = process.env.NEXT_PRIVATE_GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("API 키가 환경 변수에 설정되지 않았습니다.");
-    }
+
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // 할당된 modelName(20회 초과 시 우회 모델)을 기반으로 배열 생성
-    const fallbackModels = [modelName, "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"];
+    // 폴백 모델 배열: 현재 할당 모델부터 시작해서 나머지 모델 순서대로 (중복 제거)
+    const fallbackModels: string[] = [];
+    // 현재 모델부터 끝까지 추가
+    for (let i = primaryModelIndex; i < availableModels.length; i++) {
+      fallbackModels.push(availableModels[i]);
+    }
+    // 현재 모델 이전의 모델도 마지막 방어선으로 추가 (역순으로 전부 시도)
+    for (let i = primaryModelIndex - 1; i >= 0; i--) {
+      if (!fallbackModels.includes(availableModels[i])) {
+        fallbackModels.push(availableModels[i]);
+      }
+    }
+    
+    console.log(`[모델 선택] 우선 모델: ${fallbackModels[0]} | 폴백 순서: ${fallbackModels.join(" → ")}`);
     
     // 세대 구성(Config)은 모든 모델이 동일하게 공유합니다.
     const generationConfig: GenerationConfig = {
@@ -140,7 +258,7 @@ Each object must exactly have these 3 keys:
 - "translations": An object storing the translated string mapped to its respective language name IN KOREAN as the key (e.g., "스페인어", "프랑스어", "이탈리아어", "독일어", etc.). Provide the translated string for ALL requested languages.
 `;
 
-    // 503 서비스 지연(High demand) 발생 시 실시간으로 더 안정적인 이전 모델로 갈아타는 스마트 폴백 전략
+    // 모든 에러(404/429/503)에 자동 대응하는 스마트 폴백 전략
     let result;
     let lastError;
     
@@ -148,10 +266,7 @@ Each object must exactly have these 3 keys:
       try {
         const currentModelName = fallbackModels[attempt];
         
-        // 이전 루프와 동일한 모델이면 스킵(중복 호출 방지)
-        if (attempt > 0 && currentModelName === fallbackModels[attempt - 1]) continue;
-        
-        console.log(`[분석 시도] 사용 모델: ${currentModelName}`);
+        console.log(`[분석 시도 ${attempt + 1}/${fallbackModels.length}] 사용 모델: ${currentModelName}`);
         const currentModel = genAI.getGenerativeModel({
           model: currentModelName,
           generationConfig
@@ -169,13 +284,25 @@ Each object must exactly have these 3 keys:
         break; // 성공하면 즉시 루프 탈출
       } catch (err: any) {
         lastError = err;
-        if (err.status === 503 || err.status === 429 || err.status === 404 || err.message?.includes("503") || err.message?.includes("429") || err.message?.includes("404") || err.message?.includes("not found") || err.message?.includes("high demand") || err.message?.includes("High demand") || err.message?.includes("Quota")) {
-          console.log(`[Google API 에러] ${fallbackModels[attempt]} 서버 지연 또는 할당량(Quota/429) 초과 감지. 즉시 다음 모델로 우회합니다... | 에러: ${err.message?.split('\\n')[0]}`);
-          // 다음 모델 루프로 넘어가기 전에 약간의 쿨다운 타임
-          await new Promise((resolve) => setTimeout(resolve, 500)); 
-          continue; // 실패 시 다음 모델로 바로 루프 재배정
+        const errMsg = err.message || "";
+        const errStatus = err.status || 0;
+        
+        // 복구 가능한 에러: 모델 폐기(404), 할당량 초과(429), 서버 과부하(503)
+        const isRecoverable = 
+          [404, 429, 503].includes(errStatus) ||
+          /404|429|503|not found|high demand|quota/i.test(errMsg);
+        
+        if (isRecoverable) {
+          console.log(`[폴백] ${fallbackModels[attempt]} 실패 (${errStatus || "unknown"}). 다음 모델로 우회... | ${errMsg.split("\n")[0]}`);
+          // 폐기된 모델이 감지되면 캐시를 무효화하여 다음 요청에서 최신 목록을 받아옴
+          if (errStatus === 404 || /not found/i.test(errMsg)) {
+            cachedModels = null;
+            cacheTimestamp = 0;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          continue;
         } else {
-          // 503/429가 아닌 치명적 에러(예: API키 오류 등)는 즉시 중단
+          // 복구 불가능한 치명적 에러(예: API키 오류 등)는 즉시 중단
           throw err;
         }
       }
@@ -224,3 +351,4 @@ Each object must exactly have these 3 keys:
     return { success: false, error: error.message };
   }
 }
+

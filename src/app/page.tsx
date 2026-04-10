@@ -273,7 +273,6 @@ export default function Home() {
             </div>
           )}
         </div>
-        </div>
       </div>
 
       {/* 웰컴 팝업 모달 */}

@@ -79,7 +79,7 @@ export async function getTranslationHistory(page: number = 1, limit: number = 10
 
   const { data, count } = await supabase
     .from("translation_logs")
-    .select("id, created_at, thumbnail, model_used, success, error_message", {
+    .select("id, created_at, thumbnail, model_used, success, error_message, ip_address", {
       count: "exact",
     })
     .order("created_at", { ascending: false })
@@ -92,6 +92,7 @@ export async function getTranslationHistory(page: number = 1, limit: number = 10
     modelUsed: row.model_used,
     success: row.success,
     errorMessage: row.error_message,
+    ipAddress: row.ip_address,
   }));
 
   return { translations, total: count || 0, page, limit };

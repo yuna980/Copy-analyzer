@@ -20,6 +20,7 @@ interface TranslationRecord {
   modelUsed: string;
   success: boolean;
   errorMessage?: string;
+  ipAddress?: string;
 }
 
 interface DashboardData {
@@ -343,6 +344,7 @@ export default function AdminPage() {
               <thead>
                 <tr>
                   <th>시간</th>
+                  <th>IP</th>
                   <th>이미지</th>
                   <th>번역 데이터</th>
                   <th>사용 모델</th>
@@ -354,6 +356,7 @@ export default function AdminPage() {
                   translations.map((t) => (
                     <tr key={t.id}>
                       <td>{formatTime(t.timestamp)}</td>
+                      <td><span style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'monospace' }}>{t.ipAddress || '-'}</span></td>
                       <td>
                         {t.thumbnail ? (
                           <img
@@ -395,7 +398,7 @@ export default function AdminPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className={styles.emptyRow}>
+                    <td colSpan={6} className={styles.emptyRow}>
                       번역 기록이 없습니다.
                     </td>
                   </tr>

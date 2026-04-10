@@ -133,6 +133,10 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
     const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
     const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
     
+    // IP 추출 (로그 기록용, Rate Limit 공용)
+    const reqHeaders = await headers();
+    const clientIp = reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+    
     // 기본 모델은 동적 목록의 첫 번째 (가장 고성능)
     let primaryModelIndex = 0;
     
@@ -145,9 +149,7 @@ export async function processImageAndTranslate(base64Image: string, mimeType: st
         limiter: Ratelimit.slidingWindow(20, "1 h"),
       });
       
-      const reqHeaders = await headers();
-      const ip = reqHeaders.get("x-forwarded-for") || "127.0.0.1";
-      const { success } = await ratelimit.limit(`ratelimit_${ip}`);
+      const { success } = await ratelimit.limit(`ratelimit_${clientIp}`);
       
       if (!success) {
         throw new Error("API 호출 한도를 초과했습니다. 잠시 후 다시 시도해주세요 (1시간 당 제한).");
@@ -363,6 +365,7 @@ Each object must exactly have these 3 keys:
           model_used: usedModelName,
           success: true,
           result_data: data,
+          ip_address: clientIp,
         });
       }
     } catch (logErr) {
@@ -387,6 +390,7 @@ Each object must exactly have these 3 keys:
           model_used: 'N/A',
           success: false,
           error_message: error.message,
+          ip_address: 'unknown',
         });
       }
     } catch (logErr) {

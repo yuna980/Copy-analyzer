@@ -521,7 +521,9 @@
 }
 
 .imageModalImg {
-  max-width: 90vw;
+  width: 100%;
+  max-width: 800px;
+  min-width: 50vw;
   max-height: 90vh;
   object-fit: contain;
   border-radius: 12px;

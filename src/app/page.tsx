@@ -98,8 +98,8 @@ export default function Home() {
       const pureBase64Data = compressedImageFull.split(",")[1];
       const mimeType = compressedImageFull.substring(compressedImageFull.indexOf(":") + 1, compressedImageFull.indexOf(";"));
 
-      // 백오피스 미리보기용 썸네일 생성 (300px, WebP 고화질로 텍스트 깨짐 방지)
-      const thumbnailDataUrl = await compressImage(imagePreview, 300, "image/webp", 0.9);
+      // 백오피스 미리보기 및 확대용 고화질 썸네일 생성 (800px, WebP 고화질로 텍스트 깨짐 방지)
+      const thumbnailDataUrl = await compressImage(imagePreview, 800, "image/webp", 0.9);
 
       const response = await processImageAndTranslate(pureBase64Data, mimeType, turnstileToken, thumbnailDataUrl);
       if (response.success) {

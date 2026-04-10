@@ -200,6 +200,15 @@ export default function Home() {
             )}
           </div>
 
+          {/* 컬럼 안내 - 결과 있을 때만 버튼 아래에 노출 */}
+          {results && (
+            <div style={{ marginTop: '1rem', marginBottom: '1.5rem', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', fontSize: '0.85rem', color: '#94a3b8', lineHeight: '1.5', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <strong style={{ color: '#e2e8f0' }}>💡 컬럼 안내</strong><br />
+              <strong>MAX CHAR</strong>: 원문(Text)의 글자 수입니다. 대문자 A 기준으로 카운트합니다.<br />
+              <strong>TRANSLATE MAX CHAR</strong>: 14개 언어별 2가지 번역 시뮬레이션(간결한 UI 텍스트, 자연스러운 UI 텍스트) 중 <strong>가장 긴 글자 수</strong>를 산출한 값입니다. 디자인 레이아웃 검토 시 이 값을 기준으로 여유 공간을 확보하세요.
+            </div>
+          )}
+
           {/* 에러 메시지 */}
           {error && (
             <div className={styles.errorBox}>
@@ -242,11 +251,6 @@ export default function Home() {
                   )}
                 </tbody>
               </table>
-              <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', fontSize: '0.85rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                <strong style={{ color: '#e2e8f0' }}>💡 컬럼 안내</strong><br />
-                <strong>MAX CHAR</strong>: 원문(Text)의 글자 수입니다. 대문자 A 기준으로 카운트합니다. (예: &quot;samsung!&quot; → 8자)<br />
-                <strong>TRANSLATE MAX CHAR</strong>: 14개 언어별 2가지 번역 시뮬레이션(간결한 UI 텍스트, 자연스러운 UI 텍스트) 중 <strong>가장 긴 글자 수</strong>를 산출한 값입니다. 디자인 레이아웃 검토 시 이 값을 기준으로 여유 공간을 확보하세요.
-              </div>
             </div>
           )}
         </div>

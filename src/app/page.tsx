@@ -15,7 +15,7 @@ interface TranslationResult {
   translateText: string;
 }
 
-const compressImage = async (dataUrl: string, maxWidth = 1600): Promise<string> => {
+const compressImage = async (dataUrl: string, maxWidth = 1600, format = "image/jpeg", quality = 0.8): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.src = dataUrl;
@@ -35,8 +35,8 @@ const compressImage = async (dataUrl: string, maxWidth = 1600): Promise<string> 
       const ctx = canvas.getContext("2d");
       ctx?.drawImage(img, 0, 0, width, height);
 
-      // 이미지를 약 80% 수준의 webp/jpeg로 압축하여 base64 용량을 극적으로 줄임
-      resolve(canvas.toDataURL("image/jpeg", 0.8));
+      // 지정된 포맷과 퀄리티로 압축
+      resolve(canvas.toDataURL(format, quality));
     };
     img.onerror = () => resolve(dataUrl); // 실패 시 원본 유출
   });
@@ -98,8 +98,8 @@ export default function Home() {
       const pureBase64Data = compressedImageFull.split(",")[1];
       const mimeType = compressedImageFull.substring(compressedImageFull.indexOf(":") + 1, compressedImageFull.indexOf(";"));
 
-      // 백오피스 미리보기용 소형 썸네일 생성 (150px, Redis 저장용)
-      const thumbnailDataUrl = await compressImage(imagePreview, 150);
+      // 백오피스 미리보기용 썸네일 생성 (300px, WebP 고화질로 텍스트 깨짐 방지)
+      const thumbnailDataUrl = await compressImage(imagePreview, 300, "image/webp", 0.9);
 
       const response = await processImageAndTranslate(pureBase64Data, mimeType, turnstileToken, thumbnailDataUrl);
       if (response.success) {

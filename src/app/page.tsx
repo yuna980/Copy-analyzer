@@ -8,6 +8,7 @@ import styles from "./page.module.css";
 interface TranslationResult {
   number: string | number;
   text: string;
+  textCharCount: number;
   guide: number;
   note: string;
   translateText: string;
@@ -166,11 +167,12 @@ export default function Home() {
               <table className={styles.dataTable}>
                 <thead>
                   <tr>
-                    <th className={styles.centerAlign} style={{ width: '10%' }}>number</th>
-                    <th style={{ width: '30%' }}>Text</th>
-                    <th className={styles.centerAlign} style={{ width: '15%' }}>MAX CHAR</th>
-                    <th style={{ width: '15%' }}>note</th>
-                    <th style={{ width: '30%' }}>Translate Text</th>
+                    <th className={styles.centerAlign} style={{ width: '8%' }}>number</th>
+                    <th style={{ width: '25%' }}>Text</th>
+                    <th className={styles.centerAlign} style={{ width: '10%' }}>MAX CHAR</th>
+                    <th style={{ width: '10%' }}>note</th>
+                    <th style={{ width: '27%' }}>Translate Text</th>
+                    <th className={styles.centerAlign} style={{ width: '20%' }}>TRANSLATE MAX CHAR</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -179,14 +181,15 @@ export default function Home() {
                       <tr key={idx}>
                         <td className={styles.centerAlign}><span className={styles.cellNumber}>{row.number}</span></td>
                         <td><div className={styles.cellExample}>{row.text}</div></td>
-                        <td className={styles.centerAlign}><span className={styles.cellGuide}>{row.guide}</span></td>
+                        <td className={styles.centerAlign}><span className={styles.cellGuide}>{row.textCharCount}</span></td>
                         <td><span className={styles.cellNote}>{row.note}</span></td>
                         <td><div className={styles.cellExample}>{row.translateText}</div></td>
+                        <td className={styles.centerAlign}><span className={styles.cellGuide}>{row.guide}</span></td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
                         추출된 텍스트가 없습니다.
                       </td>
                     </tr>
@@ -194,9 +197,9 @@ export default function Home() {
                 </tbody>
               </table>
               <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', fontSize: '0.85rem', color: '#94a3b8', lineHeight: '1.5' }}>
-                <strong style={{ color: '#e2e8f0' }}>💡 MAX CHAR 산출 방식 안내</strong><br />
-                동일한 문장도 번역 뉘앙스(직역, 의역, 존댓말 등)에 따라 글자 수가 크게 달라질 수 있습니다.<br />
-                이를 방지하기 위해 번역도우미는 <strong>각 언어별로 2가지 서로 다른 느낌의 번역(짧고 간결한 UI 텍스트, 일반적이고 자연스러운 UI 텍스트)을 모두 시뮬레이션</strong>한 후, 그중 디자인 레이아웃에 가장 큰 영향을 미치는 <strong>'가장 긴 글자 수'</strong>를 MAX CHAR로 산출하여 보여줍니다.
+                <strong style={{ color: '#e2e8f0' }}>💡 컬럼 안내</strong><br />
+                <strong>MAX CHAR</strong>: 원문(Text)의 글자 수입니다. 대문자 A 기준으로 카운트합니다. (예: &quot;samsung!&quot; → 8자)<br />
+                <strong>TRANSLATE MAX CHAR</strong>: 14개 언어별 2가지 번역 시뮬레이션(간결한 UI 텍스트, 자연스러운 UI 텍스트) 중 <strong>가장 긴 글자 수</strong>를 산출한 값입니다. 디자인 레이아웃 검토 시 이 값을 기준으로 여유 공간을 확보하세요.
               </div>
             </div>
           )}

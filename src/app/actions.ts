@@ -338,6 +338,7 @@ Each object must exactly have these 3 keys:
         return {
           number: item.number || "",
           text: item.text || "",
+          textCharCount: (item.text || "").length,
           guide: longestText.length,
           note: longestLang || "알 수 없음",
           translateText: longestText

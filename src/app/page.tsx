@@ -153,7 +153,7 @@ export default function Home() {
       <div className={styles.content}>
         <h1 className={styles.title}>번역을 도와드립니다</h1>
         <p className={styles.subtitle}>
-          이미지 안의 텍스트가 번역될 때, 전 세계 어느 언어로 번역해야 가장 길어질지 확인해 보세요
+          이미지 안의 텍스트가 번역될 때, 어느 언어로 번역해야 가장 길어질지 확인해 보세요 📏
         </p>
 
         <div className={styles.glassCard}>

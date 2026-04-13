@@ -315,6 +315,13 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.modalSubtitle {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+}
+
 .modalTitle {
   font-size: 1.35rem;
   font-weight: 700;

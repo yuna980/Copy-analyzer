@@ -280,13 +280,14 @@ export default function Home() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>👋 일일이 번역하기 번거로우신가요? 번역을 대신 도와드립니다!</h2>
+              <div className={styles.modalSubtitle}>일일이 번역하기 번거로우신가요?</div>
+              <h2 className={styles.modalTitle}>👋 번역을 대신 도와드립니다!</h2>
             </div>
             
             <div className={styles.modalBody}>
               <p className={styles.modalText}>
-                넘버링한 이미지를 업로드하면 AI가 글자수를 세어주고,<br />
-                14개의 언어로 번역했을 때 <strong>가장 긴 글자수와 해당 언어</strong>를 알려주는 서비스입니다.
+                AI가 라벨링된 이미지의 텍스트를 분석하여,<br />
+                <strong>14개국 언어 중 글자 수가 가장 많아지는 언어와 텍스트 길이를 계산</strong>합니다.
               </p>
               
               <div className={styles.modalNotice}>

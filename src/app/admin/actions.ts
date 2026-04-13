@@ -55,26 +55,57 @@ export async function getDashboardData() {
     .lte("created_at", krEndOfDay.toISOString())
     .eq("success", false);
 
-  // 모델별 사용 통계
+  // 모델별 사용 통계 + 텍스트 추출량 분석용 result_data까지 가져옴
   const { data: todayLogs } = await supabase
     .from("translation_logs")
-    .select("model_used")
+    .select("model_used, result_data")
     .gte("created_at", krMidnight.toISOString())
     .lte("created_at", krEndOfDay.toISOString())
     .eq("success", true);
 
   const modelUsage: Record<string, number> = {};
+  const charCounts: number[] = []; // 건별 총 글자수 저장
+
   if (todayLogs) {
     for (const log of todayLogs) {
       const model = log.model_used;
       modelUsage[model] = (modelUsage[model] || 0) + 1;
+
+      // result_data에서 텍스트 글자수 합산
+      if (Array.isArray(log.result_data)) {
+        let totalChars = 0;
+        for (const item of log.result_data) {
+          if (item.text && typeof item.text === "string") {
+            totalChars += item.text.length;
+          }
+        }
+        if (totalChars > 0) {
+          charCounts.push(totalChars);
+        }
+      }
     }
   }
+
+  // 텍스트 추출량 통계 계산
+  const textStats = {
+    count: charCounts.length,
+    avg: charCounts.length > 0 ? Math.round(charCounts.reduce((a, b) => a + b, 0) / charCounts.length) : 0,
+    max: charCounts.length > 0 ? Math.max(...charCounts) : 0,
+    min: charCounts.length > 0 ? Math.min(...charCounts) : 0,
+    // 분포 구간: ~50자, 51~100자, 101~200자, 201자~
+    distribution: {
+      light: charCounts.filter(c => c <= 50).length,
+      medium: charCounts.filter(c => c > 50 && c <= 100).length,
+      heavy: charCounts.filter(c => c > 100 && c <= 200).length,
+      extreme: charCounts.filter(c => c > 200).length,
+    },
+  };
 
   return {
     successCount: successCount || 0,
     failCount: failCount || 0,
     modelUsage,
+    textStats,
     date: today,
   };
 }

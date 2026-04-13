@@ -27,6 +27,18 @@ interface DashboardData {
   successCount: number;
   failCount: number;
   modelUsage: Record<string, number>;
+  textStats: {
+    count: number;
+    avg: number;
+    max: number;
+    min: number;
+    distribution: {
+      light: number;
+      medium: number;
+      heavy: number;
+      extreme: number;
+    };
+  };
   date: string;
 }
 
@@ -348,6 +360,59 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* 텍스트 추출량 분석 카드 */}
+            <div className={styles.statCard}>
+              <div className={styles.statLabel}>텍스트 추출량 분석</div>
+              {dashboard.textStats.count > 0 ? (
+                <>
+                  <div className={styles.textStatsGrid}>
+                    <div className={styles.textStatItem}>
+                      <div className={styles.textStatValue}>{dashboard.textStats.avg}</div>
+                      <div className={styles.textStatLabel}>평균 글자</div>
+                    </div>
+                    <div className={styles.textStatItem}>
+                      <div className={styles.textStatValue}>{dashboard.textStats.max}</div>
+                      <div className={styles.textStatLabel}>최대 글자</div>
+                    </div>
+                    <div className={styles.textStatItem}>
+                      <div className={styles.textStatValue}>{dashboard.textStats.min}</div>
+                      <div className={styles.textStatLabel}>최소 글자</div>
+                    </div>
+                    <div className={styles.textStatItem}>
+                      <div className={styles.textStatValue}>{dashboard.textStats.count}</div>
+                      <div className={styles.textStatLabel}>분석 건수</div>
+                    </div>
+                  </div>
+                  <div className={styles.distTitle}>건수별 글자 분포</div>
+                  <div className={styles.distList}>
+                    {[
+                      { label: '~50자 (가벼움)', count: dashboard.textStats.distribution.light, color: '#34d399' },
+                      { label: '51~100자', count: dashboard.textStats.distribution.medium, color: '#38bdf8' },
+                      { label: '101~200자', count: dashboard.textStats.distribution.heavy, color: '#fbbf24' },
+                      { label: '200자+ (고부하)', count: dashboard.textStats.distribution.extreme, color: '#ef4444' },
+                    ].map((d) => {
+                      const distTotal = dashboard.textStats.count;
+                      const pct = distTotal > 0 ? Math.round((d.count / distTotal) * 100) : 0;
+                      return (
+                        <div key={d.label} className={styles.distRow}>
+                          <div className={styles.distRowTop}>
+                            <span className={styles.modelDot} style={{ backgroundColor: d.color }}></span>
+                            <span className={styles.distLabel}>{d.label}</span>
+                            <span className={styles.distCount}>{d.count}건 <span className={styles.modelPct}>({pct}%)</span></span>
+                          </div>
+                          <div className={styles.modelBarBg}>
+                            <div className={styles.modelBarFill} style={{ width: `${pct}%`, backgroundColor: d.color }}></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <div className={styles.emptyModelText}>오늘 추출 데이터가 없습니다</div>
+              )}
             </div>
           </div>
         )}

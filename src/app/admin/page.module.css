@@ -138,7 +138,7 @@
 /* ===== 대시보드 카드 ===== */
 .dashboardGrid {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: 1fr 2fr 2fr;
   gap: 1.2rem;
   margin-bottom: 2rem;
 }
@@ -249,6 +249,78 @@
   color: #475569;
   text-align: center;
   padding: 1rem;
+}
+
+/* ===== 텍스트 추출량 분석 ===== */
+.textStatsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.textStatItem {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.textStatValue {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #38bdf8;
+  line-height: 1.2;
+}
+
+.textStatLabel {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-top: 0.2rem;
+  letter-spacing: 0.04em;
+}
+
+.distTitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.distList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.distRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.distRowTop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.distLabel {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  flex: 1;
+}
+
+.distCount {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e2e8f0;
 }
 
 /* ===== 탭 바 ===== */

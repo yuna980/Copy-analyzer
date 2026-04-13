@@ -308,27 +308,31 @@ export default function AdminPage() {
             </div>
             <div className={styles.statCard}>
               <div className={styles.statLabel}>
-                사용된 AI 모델 & 모델별 번역 수
+                AI 모델별 일일 사용량 (모델당 20회)
               </div>
               <div className={styles.modelList}>
                 {Object.keys(dashboard.modelUsage).length > 0 ? (() => {
                   const entries = Object.entries(dashboard.modelUsage).sort(([, a], [, b]) => b - a);
-                  const total = entries.reduce((sum, [, count]) => sum + count, 0);
-                  const colors = ['#818cf8', '#38bdf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa'];
+                  const QUOTA = 20;
+                  const totalUsed = entries.reduce((sum, [, count]) => sum + count, 0);
+                  const totalQuota = entries.length * QUOTA;
                   return (
                     <>
                       <div className={styles.modelTotal}>
-                        총 <strong>{total}</strong>회 번역
+                        총 사용량 <strong>{totalUsed}</strong> / {totalQuota}회
                       </div>
-                      {entries.map(([model, count], idx) => {
-                        const pct = Math.round((count / total) * 100);
-                        const color = colors[idx % colors.length];
+                      {entries.map(([model, count]) => {
+                        const pct = Math.min(Math.round((count / QUOTA) * 100), 100);
+                        const color = pct >= 90 ? '#ef4444' : pct >= 60 ? '#fbbf24' : '#34d399';
                         return (
                           <div key={model} className={styles.modelRow}>
                             <div className={styles.modelRowTop}>
                               <span className={styles.modelDot} style={{ backgroundColor: color }}></span>
                               <span className={styles.modelName}>{model}</span>
-                              <span className={styles.modelCount}>{count}회 <span className={styles.modelPct}>({pct}%)</span></span>
+                              <span className={styles.modelCount}>
+                                <strong>{count}</strong>
+                                <span className={styles.modelPct}> / {QUOTA}회</span>
+                              </span>
                             </div>
                             <div className={styles.modelBarBg}>
                               <div className={styles.modelBarFill} style={{ width: `${pct}%`, backgroundColor: color }}></div>

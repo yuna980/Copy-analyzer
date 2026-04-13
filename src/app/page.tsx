@@ -280,22 +280,22 @@ export default function Home() {
         <div className={styles.modalOverlay}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>👋 Copy Analyzer에 오신 것을 환영합니다!</h2>
+              <h2 className={styles.modalTitle}>👋 일일이 번역하기 번거로우신가요? 번역을 대신 도와드립니다!</h2>
             </div>
             
             <div className={styles.modalBody}>
               <p className={styles.modalText}>
-                넘버링 한 이미지를 올리면 <strong>각 텍스트 단위로 글자수</strong>를 세어주고,<br />
-                해외 14개 언어로 번역했을 때 <strong>가장 긴 글자 수</strong>를 산출해 알려주는 서비스입니다.
+                넘버링한 이미지를 업로드하면 AI가 글자수를 세어주고,<br />
+                14개의 언어로 번역했을 때 <strong>가장 긴 글자수와 해당 언어</strong>를 알려주는 서비스입니다.
               </p>
               
               <div className={styles.modalNotice}>
-                다만, 번역이라는 게 어투나 상황에 따라 달라질 수 있기 때문에 결과가 <strong>무조건 완벽한 것은 아닙니다. 😅</strong><br />
-                디자인 작업을 위한 <span style={{ color: '#60a5fa' }}>여백 확보 참고용</span>으로 사용해주시면 감사하겠습니다!
+                ※ 기계 번역의 특성상 번역 결과가 항상 100% 정확하거나 일관되지 않을 수 있습니다.<br />
+                본 결과물은 업무 진행 시 <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>보조적인 참고 자료로만 활용</span>하시기를 권장합니다.
               </div>
 
               <div className={styles.modalWarning}>
-                🚨 <strong>주의:</strong> 서비스 안정을 위해 여러분의 번역 시도 결과와 IP 정보는 모니터링됩니다.
+                🚨 <strong>주의:</strong> 서비스의 안정과 보안을 위해 여러분의 IP 정보와 번역 데이터는 관리자에게 모니터링됩니다.(7일간 저장)
               </div>
             </div>
 

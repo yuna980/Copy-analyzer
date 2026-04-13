@@ -61,6 +61,10 @@ export default function AdminPage() {
   // 상세 이미지 더블클릭 모달
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  // 로딩 상태
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
+
   // ===== 핀 입력 핸들러 (재사용) =====
   const handlePinChange = useCallback(
     (
@@ -115,21 +119,27 @@ export default function AdminPage() {
   // ===== 대시보드 & 이력 로드 =====
   const loadDashboard = useCallback(async () => {
     try {
+      setIsLoadingDashboard(true);
       const data = await getDashboardData();
       setDashboard(data);
     } catch (err) {
       console.error("대시보드 로드 실패:", err);
+    } finally {
+      setIsLoadingDashboard(false);
     }
   }, []);
 
   const loadHistory = useCallback(async (page: number) => {
     try {
+      setIsLoadingHistory(true);
       const data = await getTranslationHistory(page, 10);
       setTranslations(data.translations);
       setHistoryTotal(data.total);
       setHistoryPage(page);
     } catch (err) {
       console.error("이력 로드 실패:", err);
+    } finally {
+      setIsLoadingHistory(false);
     }
   }, []);
 
@@ -355,7 +365,14 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {translations.length > 0 ? (
+                {isLoadingHistory ? (
+                  <tr>
+                    <td colSpan={6} className={styles.emptyRow}>
+                      <div className={styles.loadingSpinner}></div>
+                      <div style={{ marginTop: '0.75rem', color: '#64748b' }}>데이터를 불러오는 중...</div>
+                    </td>
+                  </tr>
+                ) : translations.length > 0 ? (
                   translations.map((t) => (
                     <tr key={t.id}>
                       <td>{formatTime(t.timestamp)}</td>

@@ -311,16 +311,34 @@ export default function AdminPage() {
                 사용된 AI 모델 & 모델별 번역 수
               </div>
               <div className={styles.modelList}>
-                {Object.keys(dashboard.modelUsage).length > 0 ? (
-                  Object.entries(dashboard.modelUsage)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([model, count]) => (
-                      <div key={model} className={styles.modelRow}>
-                        <span className={styles.modelName}>{model}</span>
-                        <span className={styles.modelCount}>{count}회</span>
+                {Object.keys(dashboard.modelUsage).length > 0 ? (() => {
+                  const entries = Object.entries(dashboard.modelUsage).sort(([, a], [, b]) => b - a);
+                  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+                  const colors = ['#818cf8', '#38bdf8', '#34d399', '#fbbf24', '#f87171', '#a78bfa'];
+                  return (
+                    <>
+                      <div className={styles.modelTotal}>
+                        총 <strong>{total}</strong>회 번역
                       </div>
-                    ))
-                ) : (
+                      {entries.map(([model, count], idx) => {
+                        const pct = Math.round((count / total) * 100);
+                        const color = colors[idx % colors.length];
+                        return (
+                          <div key={model} className={styles.modelRow}>
+                            <div className={styles.modelRowTop}>
+                              <span className={styles.modelDot} style={{ backgroundColor: color }}></span>
+                              <span className={styles.modelName}>{model}</span>
+                              <span className={styles.modelCount}>{count}회 <span className={styles.modelPct}>({pct}%)</span></span>
+                            </div>
+                            <div className={styles.modelBarBg}>
+                              <div className={styles.modelBarFill} style={{ width: `${pct}%`, backgroundColor: color }}></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  );
+                })() : (
                   <div className={styles.emptyModelText}>
                     오늘 사용된 모델이 없습니다
                   </div>

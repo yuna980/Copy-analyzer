@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100vh;
   background: linear-gradient(135deg, #0f172a, #1e293b);
   font-family: 'Inter', -apple-system, sans-serif;
@@ -13,6 +13,7 @@
 .content {
   width: 100%;
   max-width: 1200px;
+  margin: auto 0;
 }
 
 .title {
